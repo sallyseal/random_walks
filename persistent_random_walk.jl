@@ -20,6 +20,10 @@ all_phi = Float64[]
 time = Float64[]
 holding_time = Float64[]
 
+# Persistence Angle
+all_dtheta = Float64[]
+all_dphi = Float64[]
+
 # Create starting position at the origin
 x[1] = 0.0;
 y[1] = 0.0;
@@ -30,15 +34,19 @@ r = rand(TruncatedNormal(0,1,0,1))
 theta = acos(1-2*rand()) # theta between 0:pi radians
 phi = 2*pi*rand()        # phi between 0:2*pi radians
 
+println(theta)
+println(phi)
+
 # FOR THE PERSISTENCE
 mu_t = 0
-sigma_t = 0.5 # Can control the tightness/spread of the distribution by altering
+sigma_t = 0.4 # Can control the tightness/spread of the distribution by altering
 mu_p = 0
-sigma_p = 0.5 # Can control the tightness/spread of the distribution by altering
+sigma_p = 0.4 # Can control the tightness/spread of the distribution by altering
 
 # Create the distributions for theta and phi - change with which to update theta and phi
-dist_theta = TruncatedNormal(mu_t, sigma_t, -0.5*pi, 0.5*pi)
-dist_phi = TruncatedNormal(mu_p, sigma_p, -pi, pi)
+# Should these be halved?
+dist_theta = TruncatedNormal(mu_t, sigma_t, -pi, pi)
+dist_phi = TruncatedNormal(mu_p, sigma_p, -2*pi, 2*pi)
 
 # Perform simulation while t is <= total time of the reaction
 while t <= total_time
@@ -55,13 +63,15 @@ while t <= total_time
         dphi = rand(dist_phi)
 
         # Update theta and phi with variance sampled from distributions above
+        # Can have positive or negative updates meaning new theta is smaller or larger
+        # than previous theta
         theta += dtheta
         phi += dphi
-        # Obtain a distance
         r = rand(TruncatedNormal(0,1,0,1))
 
         # Calculate angle of persistence: Angle between new theta and previous theta
-        
+        # is this just dtheta, but must be positive?
+
 
         # Map spherical point in 3D to the Cartesian Plane
         dx = r*sin(theta)*cos(phi);
@@ -79,10 +89,11 @@ while t <= total_time
         push!(all_phi, phi)
         push!(time, t)
         push!(holding_time, t_next_jump)
-
+        push!(all_dtheta, dtheta)
+        push!(all_dphi, dphi)
     end
 end
-
+println(all_dtheta)
 # Plotting
 using PyPlot; const plt = PyPlot
 PyPlot.PyObject(PyPlot.axes3D)

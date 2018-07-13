@@ -1,7 +1,11 @@
+# This script creates a bias random walk
+# Would be nice if cell becomes more biased as it gets closer to source
+
 using Gadfly;
 using Distributions;
 using PyPlot;
 using Plotly;
+using StatPlots;
 
 # Initialize vectors
 x = zeros(1000)
@@ -19,10 +23,36 @@ all_phi = Float64[]
 time = Float64[]
 holding_time = Float64[]
 
+# Bias Angle
+bias_theta_angle = Float64[]
+bias_phi_angle = Float64[]
+
 # Create starting position at the origin
 x[1] = 0.0;
 y[1] = 0.0;
 z[1] = 0.0;
+
+# Create the attracting source point at pi radians
+r = pi
+bias_theta = acos(1-2*rand()) # theta between 0:pi radians
+bias_phi = 2*pi*rand()        # phi between 0:2*pi radians
+
+# FOR THE BIAS: variance
+sigma_t = 0.9 # Can control the tightness/spread of the distribution by altering
+sigma_p = 0.9 # Can control the tightness/spread of the distribution by altering
+# FOR THE BIAS: mean
+mu_t = bias_theta
+mu_p = bias_phi
+
+# Bounds for distributions
+lower_t = 0
+upper_t = pi
+lower_p = 0
+upper_p = 2*pi
+
+# Create the distributions for theta and phi to sample next theta and phi
+dist_theta = TruncatedNormal(bias_theta, sigma_t, lower_t, upper_t)
+dist_phi = TruncatedNormal(bias_phi, sigma_p, lower_p, upper_p)
 
 # Perform simulation while t is <= total time of the reaction
 while t <= total_time
@@ -34,14 +64,18 @@ while t <= total_time
         # Update the time
         t = t+t_next_jump
 
-        # Creating a random point in 3D
-        # Step size = r
-        # Same distribution used in Cell Press Paper
+        # Randomly sample from the distributions to get updated theta and phi to
+        # create next point in 3D space - will be close to bias theta and phi
+        theta = rand(dist_theta)
+        phi = rand(dist_phi)
         r = rand(TruncatedNormal(0,1,0,1))
-        theta = acos(1-2*rand()) # theta between 0:pi radians # confirm
-        phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-        # mapping spherical coordinates onto the cartesian plane
+        # Calculate bias theta and phi angles. Angle between source and current
+        # step
+        bias_theta = mu_t - theta
+        bias_phi = mu_p - phi
+
+        # Map spherical point in 3D to the Cartesian Plane
         dx = r*sin(theta)*cos(phi);
         dy = r*sin(theta)*sin(phi);
         dz = r*cos(theta);
@@ -57,7 +91,8 @@ while t <= total_time
         push!(all_phi, phi)
         push!(time, t)
         push!(holding_time, t_next_jump)
-
+        push!(bias_theta_angle, bias_theta)
+        push!(bias_phi_angle, bias_phi)
     end
 end
 

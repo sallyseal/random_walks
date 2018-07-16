@@ -26,8 +26,12 @@ total_time = 1000
 all_r = Float64[]
 all_theta = Float64[]
 all_phi = Float64[]
+all_x = Float64[]
+all_y = Float64[]
+all_z = Float64[]
 time = Float64[]
 holding_time = Float64[]
+turn_angles = Float64[]
 
 # Bounds for distributions
 lower_t = 0
@@ -45,64 +49,79 @@ y[1] = 0.0;
 z[1] = 0.0;
 
 # Sample first random point in 3D
-r = rand(TruncatedNormal(0,1,0,1))
+r = rand(TruncatedNormal(0,1,0,1)) # Adam uses log normal?
 theta = acos(1-2*rand()) # theta between 0:pi radians
 phi = 2*pi*rand()        # phi between 0:2*pi radians
 
 # FOR THE PERSISTENCE: variance
-sigma_t = 0.4 # Can control the tightness/spread of the distribution by altering
-sigma_p = 0.4 # Can control the tightness/spread of the distribution by altering
+sigma_t = 0.1 # Can control the tightness/spread of the distribution by altering
+sigma_p = 0.1 # Can control the tightness/spread of the distribution by altering
 
 # Perform simulation while t is <= total time of the reaction
-while t <= total_time
 
-    for i = 2:length(x)
 
-        # Sample holding time from exponential distribution or another dist?
-        t_next_jump = rand(Exponential())
-        # Update the time
-        t = t+t_next_jump
+for i = 2:length(x)
 
-        # Create variables for updating the distributions
-        mu_t = theta
-        mu_p = phi
+# Sample holding time from exponential distribution or another dist?
+t_next_jump = rand(Exponential())
+# Update the time
+t = t+t_next_jump
 
-        # Create the distributions for theta and phi to sample next theta and phi
-        # Should these be halved?
-        dist_theta = TruncatedNormal(theta, sigma_t, lower_t, upper_t)
-        dist_phi = TruncatedNormal(phi, sigma_p, lower_p, upper_p)
+# Create variables for updating the distributions
+mu_t = theta
+mu_p = phi
 
-        # Randomly sample from the distributions to get updated theta and phi to
-        # create next point in 3D space
-        theta = rand(dist_theta)
-        phi = rand(dist_phi)
-        r = rand(TruncatedNormal(0,1,0,1))
+# Create the distributions for theta and phi to sample next theta and phi
+# Should these be halved?
+# This should be sampled from wrapped normal distribution?
+# Only theta from wrapped normal distribution right?
+dist_theta = TruncatedNormal(theta, sigma_t, lower_t, upper_t)
+dist_phi = TruncatedNormal(phi, sigma_p, lower_p, upper_p)
 
-        # Calculate dtheta and dphi: angle between new and old theta and phi
-        dtheta = mu_t - theta
-        dphi = mu_p - phi
+# Randomly sample from the distributions to get updated theta and phi to
+# create next point in 3D space
+theta = rand(dist_theta)
+phi = rand(dist_phi)
+r = rand(TruncatedNormal(0,1,0,1))
 
-        # Map spherical point in 3D to the Cartesian Plane
-        dx = r*sin(theta)*cos(phi);
-        dy = r*sin(theta)*sin(phi);
-        dz = r*cos(theta);
+# Calculate dtheta and dphi: angle between new and old theta and phi
+# Or should this rahter be dot product
+dtheta = mu_t - theta
+dphi = mu_p - phi
 
-        # Updated position
-        x[i] = x[i-1] + dx
-        y[i] = y[i-1] + dy
-        z[i] = z[i-1] + dz
+# Map spherical point in 3D to the Cartesian Plane
+dx = r*sin(theta)*cos(phi);
+dy = r*sin(theta)*sin(phi);
+dz = r*cos(theta);
 
-        # Push to store all values associated with a coordinate
-        push!(all_r, r)
-        push!(all_theta, theta)
-        push!(all_phi, phi)
-        push!(time, t)
-        push!(holding_time, t_next_jump)
-        push!(all_dtheta, dtheta)
-        push!(all_dphi, dphi)
-    end
+# Updated position
+x[i] = x[i-1] + dx
+y[i] = y[i-1] + dy
+z[i] = z[i-1] + dz
+
+# Get the coordinate and previous coordinate
+c_0 = x[i], y[i], z[i]
+c_1 = x[i-1], y[i-1], z[i-1]
+
+# Calculate the angle between this vector and previous vector
+turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+# println("turn_angle: ", turn_angle)
+
+# Push to store all values associated with a coordinate
+push!(all_r, r)
+push!(all_theta, theta)
+push!(all_phi, phi)
+push!(time, t)
+push!(holding_time, t_next_jump)
+push!(all_dtheta, dtheta)
+push!(all_dphi, dphi)
+push!(all_x, x[i])
+push!(all_y, y[i])
+push!(all_z, z[i])
+push!(turn_angles, turn_angle)
 end
 
+# println(size(all_dphi))
 # CALCULATE SUMMARY STATISTICS
 
 # Straightness Index: D/L where D = max displacement; L = total path length
@@ -119,15 +138,16 @@ norm = r1^2 + r2^2 -
 l = sum(all_r)
 s_index = norm/l
 
-println(s_index)
+println("Straightness Index PRW: ", s_index)
 
-# Sinuosity Index: measures path deviation locally s prop sigma theta/ mux
-# where sigma theta = standard dev of turn angle distribution
+# Sinuosity Index: measures path deviation locally s prop sd/ mux
+# where sd = standard dev of turn angle distribution
 # mux is is mean step length
 mux = mean(all_r)
-sigma_theta = std(all_dtheta)
-sigma_phi = std(all_dphi)
-println(sigma_theta)
+sd = std(turn_angles[2:end])
+println("sd_turn_angle: ", sd)
+sinuosity = sd/mux
+println("Sinuosity PRW: ", sinuosity)
 
 # Plotting
 using PyPlot; const plt = PyPlot

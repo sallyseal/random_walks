@@ -1,6 +1,11 @@
-walkers = 3
-for i = 1:length(walkers)
+# Function to perform a random walk and return turn angles and the summary
+# statistics. Also returns plot of RW.
 
+# Declare function with parameters/ inputs
+# nsteps is an integer and is the number of steps a walker takes
+# walkers is an integer and is the number of times to perform the random walk
+# i.e. the number of atoms to fire off
+function rw(nsteps, walkers)
     using Gadfly;
     using Distributions;
     using PyPlot;
@@ -117,4 +122,6 @@ for i = 1:length(walkers)
     ax = fig[:add_subplot](111, projection="3d")
     ax[:plot](x, y, z)
 
+return(turn_angles, si, sinuosity, msd)
 end
+nsteps = 100

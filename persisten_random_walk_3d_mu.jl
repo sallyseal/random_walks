@@ -105,7 +105,6 @@ c_1 = x[i-1], y[i-1], z[i-1]
 
 # Calculate the angle between this vector and previous vector
 turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
-# println("turn_angle: ", turn_angle)
 
 # Push to store all values associated with a coordinate
 push!(all_r, r)
@@ -120,8 +119,8 @@ push!(all_y, y[i])
 push!(all_z, z[i])
 push!(turn_angles, turn_angle)
 end
-
-# println(size(all_dphi))
+println(all_dtheta)
+println(turn_angles)
 # CALCULATE SUMMARY STATISTICS
 
 # Straightness Index: D/L where D = max displacement; L = total path length

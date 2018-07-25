@@ -23,6 +23,7 @@ all_phi = Float64[]
 time = Float64[]
 holding_time = Float64[]
 turn_angles = Float64[]
+bias_angles = Float64[]
 
 # Bias Angle
 bias_theta_angle = Float64[]
@@ -33,14 +34,22 @@ x[1] = 0.0;
 y[1] = 0.0;
 z[1] = 0.0;
 
-# Create the attracting source point at pi radians
+# Create the attracting source point at pi radians in 3D
 r = pi
-bias_theta = acos(1-2*rand()) # theta between 0:pi radians
-bias_phi = 2*pi*rand()        # phi between 0:2*pi radians
+theta = acos(1-2*rand()) # theta between 0:pi radians
+phi = 2*pi*rand()        # phi between 0:2*pi radians
+
+# Convert the source point to point on Cartesian Plane
+dx = r*sin(theta)*cos(phi);
+dy = r*sin(theta)*sin(phi);
+dz = r*cos(theta);
+
+source = dx,dy,dz
+println(source)
 
 # FOR THE BIAS: variance
-sigma_t = 0.9 # Can control the tightness/spread of the distribution by altering
-sigma_p = 0.9 # Can control the tightness/spread of the distribution by altering
+sigma_t = 0.1 # Can control the tightness/spread of the distribution by altering
+sigma_p = 0.1 # Can control the tightness/spread of the distribution by altering
 # FOR THE BIAS: mean
 mu_t = bias_theta
 mu_p = bias_phi
@@ -92,6 +101,9 @@ for i = 2:length(x)
     # Calculate the angle between this vector and previous vector
     turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
+    # Calculate the angle of bias i.e. angle between source and current point
+    bias_angle = acos(vecdot(c_0,source)/sqrt(sum(c_0.*c_0)*sum(source.*source)))
+
     # Push to store all values associated with a coordinate
     push!(all_r, r)
     push!(all_theta, theta)
@@ -101,6 +113,7 @@ for i = 2:length(x)
     push!(bias_theta_angle, bias_theta)
     push!(bias_phi_angle, bias_phi)
     push!(turn_angles, turn_angle)
+    push!(bias_angles, bias_angle)
 end
 
 println(time)

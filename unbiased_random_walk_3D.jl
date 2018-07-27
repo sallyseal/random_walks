@@ -5,12 +5,13 @@ using Plotly;
 
 # List of summary statistics to plot
 rw_si = Float64[]
+rw_si_cart = Float64[]
 rw_sinuosity = Float64[]
 # rw_msd = Float64[]
 # rw_D = Float64[]
 
 # Number of iterations to perform of an nstep random walk
-iterations = 5
+iterations = 1
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
@@ -84,7 +85,9 @@ for i = 1:length(walkers)
         push!(time, t)
         push!(holding_time, t_next_jump)
         push!(turn_angles, turn_angle)
-        # push!(all_msd, msd)
+        push!(all_x, x[i])
+        push!(all_y, y[i])
+        push!(all_z, z[i])
     end
 
     # CALCULATE SUMMARY STATISTICS
@@ -92,6 +95,7 @@ for i = 1:length(walkers)
     # Straightness Index (D / L):
     # where D = max displacement; L = total path length
     # D = r - r' = sqrt((x-x')^2 + (y-y')^2 + (x-x')^2)
+    # SPHERICAL SYSTEM
     theta1 = all_theta[1]
     theta2 = all_theta[end]
     phi1 = all_phi[1]
@@ -101,9 +105,21 @@ for i = 1:length(walkers)
 
     D = r1^2 + r2^2 -
         2*r1*r2*(sin(theta1)*sin(theta2)*cos(phi1 - phi2) + cos(theta1)*cos(theta2))
+    d = sqrt(D)
     L = sum(all_r)
-    si = D/L
-    # println("straightness index:", si)
+    si = d/L
+
+    # CARTESIAN SYSTEM
+    x1 = all_x[1]
+    x2 = all_x[end]
+    y1 = all_y[1]
+    y2 = all_y[end]
+    z1 = all_z[1]
+    z2 = all_z[end]
+
+    disp = (x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2
+    disp_sqrt = sqrt(disp)
+    si_cart = disp_sqrt/L
 
     # Sinuosity Index: measures path deviation locally s prop sd/mur
     # where sd = standard dev of turn angle distribution
@@ -111,16 +127,15 @@ for i = 1:length(walkers)
     mur = mean(all_r)
     sd = std(turn_angles[2:end])
     sinuosity = sd/mur
-    # println("Sinuosity: ", sinuosity)
 
+    # Push values to a list to store them for later statistics
     push!(rw_si, si)
+    push!(rw_si_cart, si_cart)
     push!(rw_sinuosity, sinuosity)
-    println("rw straightness indexes: ", rw_si)
-    println("rw sinuosity: ", rw_sinuosity)
 
-
-    # Plotting RW uncomment the below if you want to visualise each walk
-    # using PyPlot; const plt = PyPlot
+    # Plotting RW for each iteration
+    # Uncomment the below if you want to visualise each walk
+    using PyPlot; const plt = PyPlot
     # PyPlot.PyObject(PyPlot.axes3D)
     #
     # x = x
@@ -130,15 +145,31 @@ for i = 1:length(walkers)
     # fig = plt.figure()
     # ax = fig[:add_subplot](111, projection="3d")
     # ax[:plot](x, y, z)
-
-    # Plotting distributions of straightness index & sinuosity
-    a = rw_si
-    plot1 = plt[:hist](a)
-
-    b = rw_sinuosity
-    plot2 = plt[:hist](b)
-
-
-    # Plotting msd vs time
-    # Maybe do log of this/ work out d and use this as summary stat
+    # PyPlot.title("Shape of Random Walk")
 end
+
+# Calculate the mean of summary statistics
+rw_si_mu = mean(rw_si)
+rw_si_cart_mu = mean(rw_si_cart)
+rw_sinuosity_mu = mean(rw_sinuosity)
+println("rw straightness index average: ", rw_si_mu)
+println("rw_cartesian straightness index average: ", rw_si_cart_mu)
+println("rw sinuosity average: ", rw_sinuosity_mu)
+# println("rw sinuosity: ", rw_sinuosity)
+
+# Plotting distributions of straightness index
+# a = rw_si
+# plot1 = PyPlot.plt[:hist](a)
+# PyPlot.xlabel("Straightness Index")
+# PyPlot.title("Randon Walk Straightness Index Histogram")
+
+a_cart = rw_si_cart
+plot1 = PyPlot.plt[:hist](a)
+PyPlot.xlabel("Straightness Index")
+PyPlot.title("Randon Walk Straightness Index Cartesian")
+
+# Plotting distributions of the sinuosity
+# b = rw_sinuosity
+# plot2 = PyPlot.plt[:hist](b)
+# PyPlot.xlabel("Sinuosity")
+# PyPlot.title("Randon Walk Sinuosity Histogram")

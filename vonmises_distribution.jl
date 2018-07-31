@@ -8,19 +8,24 @@ using PyPlot;
 using Plotly;
 PyPlot.PyObject(PyPlot.axes3D)
 
-x = zeros(1000)
-y = zeros(1000)
-z = zeros(1000)
+nsteps = 1000
+
+x = zeros(nsteps)
+y = zeros(nsteps)
+z = zeros(nsteps)
 
 npoints = zeros(1000)
 
-for i = 2:length(npoints)
+for i = 2:length(x)
 
+    k = 5
     # value of r doesn't matter now
     r = 1
     # arccos = inverse of the cosine function
-    theta = acos(1-2*rand())
-    phi = 2*pi*rand()
+    theta = rand(VonMises(1, k),1)
+    phi = rand(VonMises(1, k),1)
+    theta = theta[1]
+    phi = phi[1]
 
     x[i] = r*sin(theta)*cos(phi);
     y[i] = r*sin(theta)*sin(phi);

@@ -32,9 +32,9 @@ phi = 2*pi*rand()        # phi between 0:2*pi radians
 
 # FOR THE PERSISTENCE
 mu_t = 0
-sigma_t = 0.0001 # Can control the tightness/spread of the distribution by altering
+sigma_t = 0.4 # Can control the tightness/spread of the distribution by altering
 mu_p = 0
-sigma_p = 0.0001 # Can control the tightness/spread of the distribution by altering
+sigma_p = 0.4 # Can control the tightness/spread of the distribution by altering
 
 # Create the distributions for theta and phi - change with which to update theta and phi
 dist_theta = TruncatedNormal(mu_t, sigma_t, -0.5*pi, 0.5*pi)

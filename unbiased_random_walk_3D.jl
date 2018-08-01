@@ -1,7 +1,8 @@
 using Gadfly;
 using Distributions;
 using PyPlot;
-using Plotly;
+# using Plotly;
+import Plots;
 
 # List of summary statistics to plot
 rw_si = Float64[]
@@ -11,7 +12,7 @@ rw_sinuosity = Float64[]
 # rw_D = Float64[]
 
 # Number of iterations to perform of an nstep random walk
-iterations = 1
+iterations = 1000
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
@@ -36,7 +37,7 @@ for i = 1:length(walkers)
     all_y = Float64[]
     all_z = Float64[]
     turn_angles = Float64[]
-    # all_msd = Float64[]
+    displacements = Float64[]
 
     # Create starting position of the RW at the origin
     x[1] = 0.0;
@@ -52,8 +53,8 @@ for i = 1:length(walkers)
         t = t+t_next_jump
 
         # Creating a random point in 3D
-        # Same distribution used in Cell Press Paper
-        r = rand(TruncatedNormal(0,1,0,1))
+        # Average step length = 0.5 with variance of 0.5
+        r = rand(TruncatedNormal(0.8,0.2,0,1))
         theta = acos(1-2*rand()) # theta between 0:pi radians
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
@@ -77,6 +78,10 @@ for i = 1:length(walkers)
 
         # Calculate the turning angle between this vector and previous vector
         turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+
+        # Calculate the displacement between i and i-1 and store in vector
+        displacement = (x[i-1] - x[i])^2 + (y[i-1] - y[i])^2 + (z[i-1] - z[i])^2
+        push!(displacements, displacement)
 
         # Push to store all values associated with a coordinate
         push!(all_r, r)
@@ -108,7 +113,8 @@ for i = 1:length(walkers)
     d = sqrt(D)
     L = sum(all_r)
     si = d/L
-
+    SL_mean = mean(all_r)
+    # println("mean step length: ", SL_mean)
     # CARTESIAN SYSTEM
     x1 = all_x[1]
     x2 = all_x[end]
@@ -133,9 +139,11 @@ for i = 1:length(walkers)
     push!(rw_si_cart, si_cart)
     push!(rw_sinuosity, sinuosity)
 
+    # PLOTTING
+
     # Plotting RW for each iteration
     # Uncomment the below if you want to visualise each walk
-    using PyPlot; const plt = PyPlot
+    # using PyPlot; const plt = PyPlot
     # PyPlot.PyObject(PyPlot.axes3D)
     #
     # x = x
@@ -163,10 +171,10 @@ println("rw sinuosity average: ", rw_sinuosity_mu)
 # PyPlot.xlabel("Straightness Index")
 # PyPlot.title("Randon Walk Straightness Index Histogram")
 
-a_cart = rw_si_cart
-plot1 = PyPlot.plt[:hist](a)
-PyPlot.xlabel("Straightness Index")
-PyPlot.title("Randon Walk Straightness Index Cartesian")
+# a_cart = rw_si_cart
+# plot1 = PyPlot.plt[:hist](a_cart)
+# PyPlot.xlabel("Straightness Index")
+# PyPlot.title("Random Walk Straightness Index Cartesian")
 
 # Plotting distributions of the sinuosity
 # b = rw_sinuosity

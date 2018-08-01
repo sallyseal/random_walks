@@ -44,7 +44,7 @@ for i = 1:length(iterations)
         z_s = zeros(nsteps)
 
         # Set initial time = 0
-        t = 0
+        t_s = 0
 
         # Create vectors to store variables
         all_x_s = Float64[]
@@ -64,7 +64,7 @@ for i = 1:length(iterations)
             # Sample holding time from exponential distribution or another dist?
             t_next_jump = rand(Exponential())
             # Update the time
-            t = t+t_next_jump
+            t_s = t_s+t_next_jump
 
             # Creating a random point in 3D with mean step length = 0.5 and
             # variance = 0.2
@@ -96,14 +96,14 @@ for i = 1:length(iterations)
             push!(all_z_s, z[i])
             push!(all_r_s, r)
             push!(turn_angles_s, turn_angle)
-            push!(time_s, t)
+            push!(time_s, t_s)
         end
 
         # Calculate summary statistics for the 10x simulated runs and take average
         # Create vectors to store averages
-        mean_r_s = Float64[]
-        mean_si_s = Float64[]
-        mean_sinuosity_s = Float64[]
+        global mean_r_s = Float64[]
+        global mean_si_s = Float64[]
+        global mean_sinuosity_s = Float64[]
 
         # MEAN STEP LENGTH
         mean_r = mean(all_r_s)
@@ -141,7 +141,7 @@ for i = 1:length(iterations)
         z_o = zeros(nsteps)
 
         # Set initial time = 0
-        t = 0
+        t_o = 0
 
         # Create vectors to store variables
         all_x_o = Float64[]
@@ -161,7 +161,7 @@ for i = 1:length(iterations)
             # Sample holding time from exponential distribution or another dist?
             t_next_jump = rand(Exponential())
             # Update the time
-            t = t+t_next_jump
+            t_o = t_o+t_next_jump
 
             # Creating a random point in 3D with mean step length = 0.8 and
             # variance = 0.2
@@ -193,14 +193,14 @@ for i = 1:length(iterations)
             push!(all_z_o, z[i])
             push!(all_r_o, r)
             push!(turn_angles_o, turn_angle)
-            push!(time_o, t)
+            push!(time_o, t_o)
         end
 
         # Calculate summary statistics for the 10x simulated runs and take average
         # Create vectors to store averages
-        mean_r_o = Float64[]
-        mean_si_o = Float64[]
-        mean_sinuosity_o = Float64[]
+        global mean_r_o = Float64[]
+        global mean_si_o = Float64[]
+        global mean_sinuosity_o = Float64[]
 
         # MEAN STEP LENGTH
         mean_r = mean(all_r_o)
@@ -242,6 +242,8 @@ for i = 1:length(iterations)
     push!(epsilon_mean_r, diff_r)
     push!(epsilon_si, diff_si)
     push!(epsilon_sinuosity, diff_sinuosity)
+end
+
 
 # CALCULATE THE DIFFERENCES BETWEEN SIMULATED AND OBSERVED AND PUSH TO
 # EPSILON VECTORS FOR PLOTTING

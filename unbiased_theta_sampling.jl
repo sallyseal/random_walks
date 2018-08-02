@@ -8,13 +8,14 @@ using PyPlot;
 using Plotly;
 PyPlot.PyObject(PyPlot.axes3D)
 
-x = zeros(1000)
-y = zeros(1000)
-z = zeros(1000)
+nsteps = 1000
+x = zeros(nsteps)
+y = zeros(nsteps)
+z = zeros(nsteps)
 
-npoints = zeros(1000)
+# npoints = zeros(1000)
 
-for i = 2:length(npoints)
+for i = 2:length(x)
 
     # value of r doesn't matter now
     r = 1

@@ -1,252 +1,284 @@
-# This script...
+# Script creates mock data (10x 100 step random walks) with step length mean = 0.5
+# and variance = 0.1 and generates a summary statistic for straightness index &
+# sinuosity.
+# For simulation: do 10x 100 steps random walks with step length mean (m') sampled
+# from uniform distribution between 0 & 1 and variance = 0.1. I.e. for each of
+# the 10 runs a different mean will be sampled for the step length. Calculate the
+# summary statistic of each run.
+# Perform the simulation 10 000x and at each iteration calculate: (S - S')^2
+# Store these 10 000 delta values and plot their distribution
 
-# Import necessary libraries
-using Gadfly;
+# Want to infer mock data step length mean. Therefore everytime delta is small we
+# want to record what value of m' generated the small delta.
+
 using Distributions;
 using PyPlot;
-import Plots;
+# import Plots;
 
-# Create vector to store differences between summary statistics for sim vs. "observed"
-# Will plot the distribution of these differences at end
-epsilon_mean_r = zeros(iterations)
-epsilon_si = zeros(iterations)
-epsilon_sinuosity = zeros(iterations)
+# Generate the mock data (10x RWs of 100 steps each) and get summary statistics
+########## MOCK DATA ##########
 
-# Number of iterations to complete = 10 000
-iterations = 5
+# Create vectors to store the average SI and S for 10x RWs
+SI_av = Float64[]
+S_av = Float64[]
 
-for i = 1:length(iterations)
+random_walks = 10
+walks = zeros(random_walks)
+for i = 1:length(walks)
 
-    # Create vectors to store the summary stats for simulated and "observed"
-    # Will calculate the differences in simulated vs observed and push these
-    # differences to epsilon
-    sim_r_mean = Float64[]
-    sim_si = Float64[]
-    sim_sinuosity = Float64[]
+    # Initialize vectors to store the xyz coordinates the size of nsteps
+    nsteps = 100
+    x = zeros(nsteps)
+    y = zeros(nsteps)
+    z = zeros(nsteps)
 
-    observed_r_mean = Float64[]
-    observed_si = Float64[]
-    observed_sinuosity = Float64[]
+    # Set initial time = 0
+    t = 0
 
-    # Run code for simulated data and "observed" data 10x and get summary stats
-    iters = 10
+    # Create vectors to store variables
+    all_x = Float64[]
+    all_y = Float64[]
+    all_z = Float64[]
+    all_r = Float64[]
+    time = Float64[]
+    turn_angles = Float64[]
 
-    for i = 1:length(iters)
+    # Create starting position of the RW at the origin
+    x[1] = 0.0;
+    y[1] = 0.0;
+    z[1] = 0.0;
 
-###############################################################################
+    # Perform a RW of nsteps
+    for i = 2:length(x)
 
-        ### SIMULATED DATA ###
+        # Sample holding time from exponential distribution or another dist?
+        t_next_jump = rand(Exponential())
+        # Update the time
+        t = t+t_next_jump
 
-        # Initialize vectors to store the xyz coordinates
-        nsteps = 100
-        x_s = zeros(nsteps)
-        y_s = zeros(nsteps)
-        z_s = zeros(nsteps)
+        # Creating a random point in 3D
+        r = rand(TruncatedNormal(0.9, 0.1, 0, 1))
+        theta = acos(1-2*rand())                # theta between 0:pi radians
+        phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
-        # Set initial time = 0
-        t_s = 0
+        # Mapping spherical coordinates onto the cartesian plane
+        dx = r*sin(theta)*cos(phi);
+        dy = r*sin(theta)*sin(phi);
+        dz = r*cos(theta);
 
-        # Create vectors to store variables
-        all_x_s = Float64[]
-        all_y_s = Float64[]
-        all_z_s = Float64[]
-        all_r_s = Float64[]
-        turn_angles_s = Float64[]
-        time_s = Float64[]
+        # Updated position
+        x[i] = x[i-1] + dx
+        y[i] = y[i-1] + dy
+        z[i] = z[i-1] + dz
 
-        # Create starting position of the RW at the origin
-        x[1] = 0.0;
-        y[1] = 0.0;
-        z[1] = 0.0;
+        # Get the current [i] and previous [i-1] coordinates to calculate angle
+        # between the 2 vectors = turning angle
+        c_1 = x[i], y[i], z[i]
+        c_0 = x[i-1], y[i-1], z[i-1]
 
-        # Perform a RW of nsteps
-        for i = 2:length(x)
-            # Sample holding time from exponential distribution or another dist?
-            t_next_jump = rand(Exponential())
-            # Update the time
-            t_s = t_s+t_next_jump
+        # Calculate the turning angle between this vector and previous vector
+        turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
-            # Creating a random point in 3D with mean step length = 0.5 and
-            # variance = 0.2
-            r = rand(TruncatedNormal(0.5,0.2,0,1))
-            theta = acos(1-2*rand()) # theta between 0:pi radians
-            phi = 2*pi*rand()        # phi between 0:2*pi radians
-
-            # Mapping spherical coordinates onto the cartesian plane
-            dx = r*sin(theta)*cos(phi);
-            dy = r*sin(theta)*sin(phi);
-            dz = r*cos(theta);
-
-            # Updated position
-            x[i] = x[i-1] + dx
-            y[i] = y[i-1] + dy
-            z[i] = z[i-1] + dz
-
-            # Get the current [i] and previous [i-1] coordinates to calculate angle
-            # between the 2 vectors = turning angle
-            c_1 = x[i], y[i], z[i]
-            c_0 = x[i-1], y[i-1], z[i-1]
-
-            # Calculate the turning angle between this vector and previous vector
-            turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
-
-            # Push to store all values associated with a coordinate
-            push!(all_x_s, x[i])
-            push!(all_y_s, y[i])
-            push!(all_z_s, z[i])
-            push!(all_r_s, r)
-            push!(turn_angles_s, turn_angle)
-            push!(time_s, t_s)
-        end
-
-        # Calculate summary statistics for the 10x simulated runs and take average
-        # Create vectors to store averages
-        global mean_r_s = Float64[]
-        global mean_si_s = Float64[]
-        global mean_sinuosity_s = Float64[]
-
-        # MEAN STEP LENGTH
-        mean_r = mean(all_r_s)
-
-        # STRAIGHTNESS INDEX: D/L
-        x1 = all_x_s[1]
-        x2 = all_x_s[end]
-        y1 = all_y_s[1]
-        y2 = all_y_s[end]
-        z1 = all_z_s[1]
-        z2 = all_z_s[end]
-        D_s = (x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2
-        D_s = sqrt(D_s)
-        L = sum(all_r_s)
-
-        si_s = D_s / L
-
-        # SINUOSITY: sd of turn angles / mean step length
-        sd_s = std(turn_angles_s[2:end])
-        sinuosity_s = sd_s / mean_r
-
-        # Push the average of the summary statistics for 10x runs to a vector
-        push!(mean_r_s, mean_r)
-        push!(mean_si_s, mean(si_s))
-        push!(mean_sinuosity_s, mean(sinuosity_s))
-
-###############################################################################
-
-        ### OBSERVED DATA ###
-
-        # Initialize vectors to store the xyz coordinates
-        nsteps = 100
-        x_o = zeros(nsteps)
-        y_o = zeros(nsteps)
-        z_o = zeros(nsteps)
-
-        # Set initial time = 0
-        t_o = 0
-
-        # Create vectors to store variables
-        all_x_o = Float64[]
-        all_y_o = Float64[]
-        all_z_o = Float64[]
-        all_r_o = Float64[]
-        turn_angles_o = Float64[]
-        time_o = Float64[]
-
-        # Create starting position of the RW at the origin
-        x[1] = 0.0;
-        y[1] = 0.0;
-        z[1] = 0.0;
-
-        # Perform a RW of nsteps
-        for i = 2:length(x)
-            # Sample holding time from exponential distribution or another dist?
-            t_next_jump = rand(Exponential())
-            # Update the time
-            t_o = t_o+t_next_jump
-
-            # Creating a random point in 3D with mean step length = 0.8 and
-            # variance = 0.2
-            r = rand(TruncatedNormal(0.8,0.2,0,1))
-            theta = acos(1-2*rand()) # theta between 0:pi radians
-            phi = 2*pi*rand()        # phi between 0:2*pi radians
-
-            # Mapping spherical coordinates onto the cartesian plane
-            dx = r*sin(theta)*cos(phi);
-            dy = r*sin(theta)*sin(phi);
-            dz = r*cos(theta);
-
-            # Updated position
-            x[i] = x[i-1] + dx
-            y[i] = y[i-1] + dy
-            z[i] = z[i-1] + dz
-
-            # Get the current [i] and previous [i-1] coordinates to calculate angle
-            # between the 2 vectors = turning angle
-            c_1 = x[i], y[i], z[i]
-            c_0 = x[i-1], y[i-1], z[i-1]
-
-            # Calculate the turning angle between this vector and previous vector
-            turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
-
-            # Push to store all values associated with a coordinate
-            push!(all_x_o, x[i])
-            push!(all_y_o, y[i])
-            push!(all_z_o, z[i])
-            push!(all_r_o, r)
-            push!(turn_angles_o, turn_angle)
-            push!(time_o, t_o)
-        end
-
-        # Calculate summary statistics for the 10x simulated runs and take average
-        # Create vectors to store averages
-        global mean_r_o = Float64[]
-        global mean_si_o = Float64[]
-        global mean_sinuosity_o = Float64[]
-
-        # MEAN STEP LENGTH
-        mean_r = mean(all_r_o)
-
-        # STRAIGHTNESS INDEX: D/L
-        x1 = all_x_o[1]
-        x2 = all_x_o[end]
-        y1 = all_y_o[1]
-        y2 = all_y_o[end]
-        z1 = all_z_o[1]
-        z2 = all_z_o[end]
-        D_o = (x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2
-        D_o = sqrt(D_o)
-        L = sum(all_r_o)
-
-        si_o = D_o / L
-
-        # SINUOSITY: sd of turn angles / mean step length
-        sd_o = std(turn_angles_o[2:end])
-        sinuosity_o = sd_o / mean_r
-
-        # Push the average of the summary statistics for 10x runs to a vector
-        push!(mean_r_o, mean_r)
-        push!(mean_si_o, mean(si_o))
-        push!(mean_sinuosity_o, mean(sinuosity_o))
-
-###############################################################################
+        # Push to store all values associated with a coordinate
+        push!(all_x, x[i])
+        push!(all_y, y[i])
+        push!(all_z, z[i])
+        push!(all_r, r)
+        push!(time, t)
+        push!(turn_angles, turn_angle)
     end
 
-    # Get the difference between the average of ss between simulated and observed
-    # for the 10x iterations. Do this 10 000 times and push these 10 000 differences
-    # to epsilon vectors for plotting
-    # Can take square of difference or absolute value of the difference?
+    # Calculate mock summary statistics
 
-    diff_r = (mean_r_o - mean_r_s)^2
-    diff_si = (mean_si_o - mean_si_s)^2
-    diff_sinuosity = (mean_sinuosity_o - mean_sinuosity_s)^2
+    # Straightness Index: D/L where D= max displacement & L = total path length
+    # D = r - r' = sqrt((x-x')^2 + (y-y')^2 + (x-x')^2)
+    x1 = all_x[1]
+    x2 = all_x[end]
+    y1 = all_y[1]
+    y2 = all_y[end]
+    z1 = all_z[1]
+    z2 = all_z[end]
+    L = sum(all_r)
 
-    push!(epsilon_mean_r, diff_r)
-    push!(epsilon_si, diff_si)
-    push!(epsilon_sinuosity, diff_sinuosity)
+    disp = (x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2
+    disp = sqrt(disp)
+    si = disp/L
+
+    # Sinuosity Index: measures path deviation locally s prop sd/mur
+    # where sd = standard dev of turn angle distribution
+    # mur = mean step length
+    mur = mean(all_r)
+    sd = std(turn_angles[2:end])
+    s = sd/mur
+
+    # Push ss to vector that stores ss for each one of the 10 runs
+    push!(SI_av, si)
+    push!(S_av, s)
 end
+SI_av = mean(SI_av)
+S_av = mean(S_av)
+println("mock data SI_av: ", SI_av)
+println("mock data S_av: ", S_av)
 
 
-# CALCULATE THE DIFFERENCES BETWEEN SIMULATED AND OBSERVED AND PUSH TO
-# EPSILON VECTORS FOR PLOTTING
-println("epsilon_mean_r: ", epsilon_mean_r)
-println("epsilon_si: ", epsilon_si)
-println("epsilon_sinuosity: ", epsilon_sinuosity)
+
+######### SIMULATION 10 000 x ##########
+
+# Create vectors to store deltas for summary stats and mean values used to gen ss
+delta_SI = Float64[]
+delta_S = Float64[]
+means = Float64[]
+
+# Repeat simulation 10 000x
+for i in 1:100
+
+    # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
+    ########## SIMULATED DATA ##########
+
+    # Create vectors to store the average SI and S for 10x RWs
+    SI_prime_av = Float64[]
+    S_prime_av = Float64[]
+
+    # Sample step length mean from uniform dist between 0 & 1 save value to means
+    m = rand()
+    push!(means, m)
+
+    random_walks = 10
+    walks = zeros(random_walks)
+    for i = 1:length(walks)
+
+        # Initialize vectors to store the xyz coordinates the size of nsteps
+        nsteps = 100
+        x = zeros(nsteps)
+        y = zeros(nsteps)
+        z = zeros(nsteps)
+
+        # Set initial time = 0
+        t = 0
+
+        # Create vectors to store variables
+        all_x = Float64[]
+        all_y = Float64[]
+        all_z = Float64[]
+        all_r = Float64[]
+        time = Float64[]
+        turn_angles = Float64[]
+
+        # Create starting position of the RW at the origin
+        x[1] = 0.0;
+        y[1] = 0.0;
+        z[1] = 0.0;
+
+        # Perform a RW of nsteps
+        for i = 2:length(x)
+
+            # Sample holding time from exponential distribution or another dist?
+            t_next_jump = rand(Exponential())
+            # Update the time
+            t = t+t_next_jump
+
+            # Creating a random point in 3D
+            r = rand(TruncatedNormal(m, 0.1, 0, 1))
+            theta = acos(1-2*rand())                # theta between 0:pi radians
+            phi = 2*pi*rand()                       # phi between 0:2*pi radians
+
+            # Mapping spherical coordinates onto the cartesian plane
+            dx = r*sin(theta)*cos(phi);
+            dy = r*sin(theta)*sin(phi);
+            dz = r*cos(theta);
+
+            # Updated position
+            x[i] = x[i-1] + dx
+            y[i] = y[i-1] + dy
+            z[i] = z[i-1] + dz
+
+            # Get the current [i] and previous [i-1] coordinates to calculate angle
+            # between the 2 vectors = turning angle
+            c_1 = x[i], y[i], z[i]
+            c_0 = x[i-1], y[i-1], z[i-1]
+
+            # Calculate the turning angle between this vector and previous vector
+            turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+
+            # Push to store all values associated with a coordinate
+            push!(all_x, x[i])
+            push!(all_y, y[i])
+            push!(all_z, z[i])
+            push!(all_r, r)
+            push!(time, t)
+            push!(turn_angles, turn_angle)
+        end
+
+        # Calculate simulated summary statistics
+
+        # Straightness Index: D/L where D= max displacement & L = total path length
+        # D = r - r' = sqrt((x-x')^2 + (y-y')^2 + (x-x')^2)
+        x1 = all_x[1]
+        x2 = all_x[end]
+        y1 = all_y[1]
+        y2 = all_y[end]
+        z1 = all_z[1]
+        z2 = all_z[end]
+        L = sum(all_r)
+
+        disp = (x1 - x2)^2 + (y1 - y2)^2 + (z1 - z2)^2
+        disp = sqrt(disp)
+        si = disp/L
+
+        # Sinuosity Index: measures path deviation locally s prop sd/mur
+        # where sd = standard dev of turn angle distribution
+        # mur = mean step length
+        mur = mean(all_r)
+        sd = std(turn_angles[2:end])
+        s = sd/mur
+
+        # Push ss to vector that stores ss for each one of the 10 runs
+        push!(SI_prime_av, si)
+        push!(S_prime_av, s)
+    end
+    SI_prime_av = mean(SI_prime_av)
+    S_prime_av = mean(S_prime_av)
+    # println(SI_prime_av)
+    # println(S_prime_av)
+
+    # Calculate delta and push to delta vector for plotting
+    # delta vector will be 10 000 long
+    difference_si = (SI_av - SI_prime_av)^2
+    difference_s = (S_av - S_prime_av)^2
+    # println("difference_si: ", difference_si)
+    # println("difference_s: ", difference_s)
+
+    push!(delta_SI, difference_si)
+    push!(delta_S, difference_s)
+end
+# println("delta_SI: ", delta_SI)
+# println("delta_S: ", delta_S)
+# println("m' values: ", means)
+
+# PLOTTING
+# Plot the distribution of the deltas for SI and S
+
+# x_si = delta_SI
+# plot1 = PyPlot.plt[:hist](x_si)
+# PyPlot.xlabel("Straightness Index Delta Distribution")
+# PyPlot.title("Difference in SI between mock and simulated data")
+
+# x_s = delta_S
+# plot2 = PyPlot.plt[:hist](x_s)
+# PyPlot.xlabel("Sinuosity Delta Distribution")
+# PyPlot.title("Difference in sinuosity between mock and simulated data")
+
+# Plot deltas against m'
+# x = delta_SI
+# y = means
+# PyPlot.xlabel("Delta for SI")
+# PyPlot.ylabel("m' values")
+# scatter(x,y)
+
+x = delta_S
+y = means
+PyPlot.xlabel("Delta for S")
+PyPlot.ylabel("m' values")
+scatter(x,y)
+
+println("mean m' value: ", mean(means))

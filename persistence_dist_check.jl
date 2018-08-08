@@ -5,9 +5,10 @@ using Plotly;
 using StatPlots;
 
 # Initialize vectors
-x = zeros(1000)
-y = zeros(1000)
-z = zeros(1000)
+nsteps = 5000
+x = zeros(nsteps)
+y = zeros(nsteps)
+z = zeros(nsteps)
 
 # Set initial time = 0 and have a total
 t = 0
@@ -32,9 +33,9 @@ phi = 2*pi*rand()        # phi between 0:2*pi radians
 
 # FOR THE PERSISTENCE
 mu_t = 0
-sigma_t = 0.4 # Can control the tightness/spread of the distribution by altering
+sigma_t = 0.1 # Can control the tightness/spread of the distribution by altering
 mu_p = 0
-sigma_p = 0.4 # Can control the tightness/spread of the distribution by altering
+sigma_p = 0.1 # Can control the tightness/spread of the distribution by altering
 
 # Create the distributions for theta and phi - change with which to update theta and phi
 dist_theta = TruncatedNormal(mu_t, sigma_t, -0.5*pi, 0.5*pi)

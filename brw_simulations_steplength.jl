@@ -1,19 +1,8 @@
-# Script creates mock data (10x 100 step random walks) with step length mean = 0.5
-# and variance = 0.1 and generates a summary statistic for straightness index &
-# sinuosity.
-# For simulation: do 10x 100 steps random walks with step length mean (m') sampled
-# from uniform distribution between 0 & 1 and variance = 0.1. I.e. for each of
-# the 10 runs a different mean will be sampled for the step length. Calculate the
-# summary statistic of each run.
-# Perform the simulation 10 000x and at each iteration calculate: (S - S')^2
-# Store these 10 000 delta values and plot their distribution
-
-# Want to infer mock data step length mean. Therefore everytime delta is small we
-# want to record what value of m' generated the small delta.
+# This script does the same as script rw_simulations.jl
+# Here we attempt to infer mean step length of a biased random walk
 
 using Distributions;
 using PyPlot;
-# import Plots;
 
 # Generate the mock data (10x RWs of 100 steps each) and get summary statistics
 ########## MOCK DATA ##########
@@ -21,6 +10,9 @@ using PyPlot;
 # Create vectors to store the average SI and S for 10x RWs
 SI_av = Float64[]
 S_av = Float64[]
+
+# Set the level or bias higher by increasing k
+k = 15
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -48,6 +40,15 @@ for i = 1:length(walks)
     y[1] = 0.0;
     z[1] = 0.0;
 
+    # Sample a random point that will be the source with r = pi
+    r = pi
+    theta = acos(1-2*rand()) # theta between 0:pi radians
+    phi = 2*pi*rand()        # phi between 0:2*pi radians
+
+    source = (r, theta, phi)
+    btheta = source[2]
+    bphi = source[3]
+
     # Perform a RW of nsteps
     for i = 2:length(x)
 
@@ -57,9 +58,14 @@ for i = 1:length(walks)
         t = t+t_next_jump
 
         # Creating a random point in 3D
+        # k = concentration, the higher k, the more biased the random walk
+        # k = 1
+        # Here we want to try and infer the mean step length
         r = rand(TruncatedNormal(0.1, 0.1, 0, 1))
-        theta = acos(1-2*rand())                # theta between 0:pi radians
-        phi = 2*pi*rand()                       # phi between 0:2*pi radians
+        theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
+        theta = theta[1]
+        phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
+        phi = phi[1]
 
         # Mapping spherical coordinates onto the cartesian plane
         dx = r*sin(theta)*cos(phi);
@@ -130,7 +136,7 @@ delta_S = Float64[]
 means = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:10000
+for i in 1:1000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -169,6 +175,15 @@ for i in 1:10000
         y[1] = 0.0;
         z[1] = 0.0;
 
+        # Sample a random point that will be the source with r = pi
+        r = pi
+        theta = acos(1-2*rand()) # theta between 0:pi radians
+        phi = 2*pi*rand()        # phi between 0:2*pi radians
+
+        source = (r, theta, phi)
+        btheta = source[2]
+        bphi = source[3]
+
         # Perform a RW of nsteps
         for i = 2:length(x)
 
@@ -178,9 +193,14 @@ for i in 1:10000
             t = t+t_next_jump
 
             # Creating a random point in 3D
+            # k = concentration, the higher k, the more biased the random walk
+            # k = 1
+            # Here we want to try and infer the mean step length
             r = rand(TruncatedNormal(m, 0.1, 0, 1))
-            theta = acos(1-2*rand())                # theta between 0:pi radians
-            phi = 2*pi*rand()                       # phi between 0:2*pi radians
+            theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
+            theta = theta[1]
+            phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
+            phi = phi[1]
 
             # Mapping spherical coordinates onto the cartesian plane
             dx = r*sin(theta)*cos(phi);
@@ -238,8 +258,6 @@ for i in 1:10000
     end
     SI_prime_av = mean(SI_prime_av)
     S_prime_av = mean(S_prime_av)
-    # println(SI_prime_av)
-    # println(S_prime_av)
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
@@ -251,36 +269,34 @@ for i in 1:10000
     push!(delta_SI, difference_si)
     push!(delta_S, difference_s)
 end
-# println("delta_SI: ", delta_SI)
-# println("delta_S: ", delta_S)
-# println("m' values: ", means)
 
 # PLOTTING
 # Plot the distribution of the deltas for SI and S
 
-x_si = delta_SI
-plot1 = PyPlot.plt[:hist](x_si; bins=80)
-PyPlot.xlabel("Delta SI")
-PyPlot.ylabel("Density")
-PyPlot.title("Difference in Straightness Index between mock and simulated data: RW")
+# x_si = delta_SI
+# plot1 = PyPlot.plt[:hist](x_si; bins=50)
+# PyPlot.xlabel("Straightness Index Delta Distribution")
+# PyPlot.title("Difference in SI between mock and simulated data")
 
 # x_s = delta_S
 # plot2 = PyPlot.plt[:hist](x_s; bins=50)
 # PyPlot.xlabel("Sinuosity Delta Distribution")
 # PyPlot.title("Difference in sinuosity between mock and simulated data")
 
-# Plot deltas against m'
+# Plot deltas against m' where deltas are the dependent variables and m' indep
+# dependent var: y axis (SI or S)
+# independent var: x axis (m')
 # x = means
 # y = delta_SI
 # PyPlot.xlabel("m' values")
-# PyPlot.ylabel("Delta for SI")
+# PyPlot.ylabel("Delta SI")
 # scatter(x,y)
 
-# x = means
-# y = delta_S
-# PyPlot.xlabel("m' values")
-# PyPlot.ylabel("Delta for S")
-# # scatter(x,y, xlim(-0.1,0.05))
-# scatter(x,y)
+x = means
+y = delta_S
+PyPlot.xlabel("m' values")
+PyPlot.ylabel("Delta for S")
+# scatter(x,y, xlim(-0.1,0.05))
+scatter(x,y)
 
 println("mean m' value: ", mean(means))

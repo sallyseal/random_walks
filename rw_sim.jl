@@ -4,7 +4,7 @@ epsilon_mean_r = Float64[]
 epsilon_si = Float64[]
 epsilon_sinuosity = Float64[]
 
-simulations = 10
+simulations = 1000
 sims = zeros(simulations)
 for i = 1:length(sims)
 
@@ -41,12 +41,12 @@ for i = 1:length(sims)
         time_s = Float64[]
 
         # Create starting position of the RW at the origin
-        x[1] = 0.0;
-        y[1] = 0.0;
-        z[1] = 0.0;
+        x_s[1] = 0.0;
+        y_s[1] = 0.0;
+        z_s[1] = 0.0;
 
         # Perform a RW of nsteps
-        for i = 2:length(x)
+        for i = 2:length(x_s)
             # Sample holding time from exponential distribution or another dist?
             t_next_jump = rand(Exponential())
             # Update the time
@@ -54,7 +54,7 @@ for i = 1:length(sims)
 
             # Creating a random point in 3D with mean step length = 0.5 and
             # variance = 0.2
-            r = rand(TruncatedNormal(0.5,0.2,0,1))
+            r = rand(TruncatedNormal(0.5,0.1,0,1))
             theta = acos(1-2*rand()) # theta between 0:pi radians
             phi = 2*pi*rand()        # phi between 0:2*pi radians
 
@@ -64,22 +64,22 @@ for i = 1:length(sims)
             dz = r*cos(theta);
 
             # Updated position
-            x[i] = x[i-1] + dx
-            y[i] = y[i-1] + dy
-            z[i] = z[i-1] + dz
+            x_s[i] = x_s[i-1] + dx
+            y_s[i] = y_s[i-1] + dy
+            z_s[i] = z_s[i-1] + dz
 
             # Get the current [i] and previous [i-1] coordinates to calculate angle
             # between the 2 vectors = turning angle
-            c_1 = x[i], y[i], z[i]
-            c_0 = x[i-1], y[i-1], z[i-1]
+            c_1 = x_s[i], y_s[i], z_s[i]
+            c_0 = x_s[i-1], y_s[i-1], z_s[i-1]
 
             # Calculate the turning angle between this vector and previous vector
             turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
             # Push to store all values associated with a coordinate
-            push!(all_x_s, x[i])
-            push!(all_y_s, y[i])
-            push!(all_z_s, z[i])
+            push!(all_x_s, x_s[i])
+            push!(all_y_s, y_s[i])
+            push!(all_z_s, z_s[i])
             push!(all_r_s, r)
             push!(turn_angles_s, turn_angle)
             push!(time_s, t_s)
@@ -137,12 +137,12 @@ for i = 1:length(sims)
         time_o = Float64[]
 
         # Create starting position of the RW at the origin
-        x[1] = 0.0;
-        y[1] = 0.0;
-        z[1] = 0.0;
+        x_o[1] = 0.0;
+        y_o[1] = 0.0;
+        z_o[1] = 0.0;
 
         # Perform a RW of nsteps
-        for i = 2:length(x)
+        for i = 2:length(x_o)
             # Sample holding time from exponential distribution or another dist?
             t_next_jump = rand(Exponential())
             # Update the time
@@ -160,22 +160,22 @@ for i = 1:length(sims)
             dz = r*cos(theta);
 
             # Updated position
-            x[i] = x[i-1] + dx
-            y[i] = y[i-1] + dy
-            z[i] = z[i-1] + dz
+            x_o[i] = x_o[i-1] + dx
+            y_o[i] = y_o[i-1] + dy
+            z_o[i] = z_o[i-1] + dz
 
             # Get the current [i] and previous [i-1] coordinates to calculate angle
             # between the 2 vectors = turning angle
-            c_1 = x[i], y[i], z[i]
-            c_0 = x[i-1], y[i-1], z[i-1]
+            c_1 = x_o[i], y_o[i], z_o[i]
+            c_0 = x_o[i-1], y_o[i-1], z_o[i-1]
 
             # Calculate the turning angle between this vector and previous vector
             turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
             # Push to store all values associated with a coordinate
-            push!(all_x_o, x[i])
-            push!(all_y_o, y[i])
-            push!(all_z_o, z[i])
+            push!(all_x_o, x_o[i])
+            push!(all_y_o, y_o[i])
+            push!(all_z_o, z_o[i])
             push!(all_r_o, r)
             push!(turn_angles_o, turn_angle)
             push!(time_o, t_o)
@@ -214,14 +214,14 @@ for i = 1:length(sims)
     end
 
     # PRINT OUT SS FOR 10X ITERATIONS
-    println("ten_r_s: ", ten_r_s)
-    println("ten_si_s: ", ten_si_s)
-    println("ten_sinuosity_s: ", ten_sinuosity_s)
-    println("**********")
-    println("ten_r_o: ", ten_r_o)
-    println("ten_si_o: ", ten_si_o)
-    println("ten_sinuosity_o: ", ten_sinuosity_o)
-    println("**********")
+    # println("ten_r_s: ", ten_r_s)
+    # println("ten_si_s: ", ten_si_s)
+    # println("ten_sinuosity_s: ", ten_sinuosity_s)
+    # println("**********")
+    # println("ten_r_o: ", ten_r_o)
+    # println("ten_si_o: ", ten_si_o)
+    # println("ten_sinuosity_o: ", ten_sinuosity_o)
+    # println("**********")
 
     # GET AVERAGES FOR THE SS OF 10X ITERATIONS AND PRINT
     average_r_s = mean(ten_r_s)
@@ -232,15 +232,15 @@ for i = 1:length(sims)
     average_si_o = mean(ten_si_o)
     average_sinuosity_o = mean(ten_sinuosity_o)
 
-    println("average_r_s: ", average_r_s)
-    println("average_si_s: ", average_si_s)
-    println("average_sinuosity_s: ", average_sinuosity_s)
-    println("**********")
-
-    println("average_r_o: ", average_r_o)
-    println("average_si_o: ", average_si_o)
-    println("average_sinuosity_o: ", average_sinuosity_o)
-    println("**********")
+    # println("average_r_s: ", average_r_s)
+    # println("average_si_s: ", average_si_s)
+    # println("average_sinuosity_s: ", average_sinuosity_s)
+    # println("**********")
+    #
+    # println("average_r_o: ", average_r_o)
+    # println("average_si_o: ", average_si_o)
+    # println("average_sinuosity_o: ", average_sinuosity_o)
+    # println("**********")
 
     # Calculate the difference squared between averages of each summary statistic and
     # push to big epsilon list
@@ -248,10 +248,10 @@ for i = 1:length(sims)
     diff_si = (average_si_o - average_si_s)^2
     diff_sinuosity = (average_sinuosity_o - average_sinuosity_s)^2
 
-    println("diff_r: ", diff_r)
-    println("diff_si: ", diff_si)
-    println("diff_sinuosity: ", diff_sinuosity)
-    println("**********")
+    # println("diff_r: ", diff_r)
+    # println("diff_si: ", diff_si)
+    # println("diff_sinuosity: ", diff_sinuosity)
+    # println("**********")
 
     push!(epsilon_mean_r, diff_r)
     push!(epsilon_si, diff_si)
@@ -260,12 +260,19 @@ end
 
 # PRINT THE EPSILON VECTORS THAT WE WILL PLOT
 # Should be the length of simulations
-println("epsilon_mean_r:", epsilon_mean_r)
-println("epsilon_si: ", epsilon_si)
-println("epsilon_sinuosity: ", epsilon_sinuosity)
+# println("epsilon_mean_r:", epsilon_mean_r)
+# println("epsilon_si: ", epsilon_si)
+# println("epsilon_sinuosity: ", epsilon_sinuosity)
 
 # PLOT HISTOGRAM OF THE DIFFERENCES OF EACH SUMMARY STATISTIC
-a = epsilon_si
-plot2 = PyPlot.plt[:hist](a)
-PyPlot.xlabel("Straightness Index Difference between Simulated & Observed")
-PyPlot.title("Straightness Index Difference Distribution")
+# STRAIGHTNESS INDEX
+# a = epsilon_si
+# plot2 = PyPlot.plt[:hist](a)
+# PyPlot.xlabel("Straightness Index Difference between Simulated & Observed")
+# PyPlot.title("Straightness Index Difference Distribution")
+
+# SINUOSITY
+b = epsilon_sinuosity
+plot2 = PyPlot.plt[:hist](b)
+PyPlot.xlabel("Epsilon between Simulated & Observed")
+PyPlot.title("Sinuosity")

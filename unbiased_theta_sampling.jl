@@ -8,7 +8,7 @@ using PyPlot;
 using Plotly;
 PyPlot.PyObject(PyPlot.axes3D)
 
-nsteps = 1000
+nsteps = 1500
 x = zeros(nsteps)
 y = zeros(nsteps)
 z = zeros(nsteps)
@@ -22,6 +22,7 @@ for i = 2:length(x)
     # arccos = inverse of the cosine function
     theta = acos(1-2*rand())
     phi = 2*pi*rand()
+    # theta = pi*rand()
 
     x[i] = r*sin(theta)*cos(phi);
     y[i] = r*sin(theta)*sin(phi);

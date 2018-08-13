@@ -12,12 +12,12 @@ rw_sinuosity = Float64[]
 # rw_D = Float64[]
 
 # Number of iterations to perform of an nstep random walk
-iterations = 1000
+iterations = 1
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
     # Initialize vectors to store the xyz coordinates the size of nsteps
-    nsteps = 100
+    nsteps = 200
     x = zeros(nsteps)
     y = zeros(nsteps)
     z = zeros(nsteps)
@@ -143,17 +143,20 @@ for i = 1:length(walkers)
 
     # Plotting RW for each iteration
     # Uncomment the below if you want to visualise each walk
-    # using PyPlot; const plt = PyPlot
-    # PyPlot.PyObject(PyPlot.axes3D)
-    #
-    # x = x
-    # y = y
-    # z = z
-    #
-    # fig = plt.figure()
-    # ax = fig[:add_subplot](111, projection="3d")
-    # ax[:plot](x, y, z)
+    using PyPlot; const plt = PyPlot
+    PyPlot.PyObject(PyPlot.axes3D)
+
+    x = x
+    y = y
+    z = z
+
+    fig = plt.figure()
+    ax = fig[:add_subplot](111, projection="3d")
+    ax[:plot](x, y, z)
     # PyPlot.title("Shape of Random Walk")
+    PyPlot.xlabel("x")
+    PyPlot.ylabel("y")
+    PyPlot.zlabel("z")
 end
 
 # Calculate the mean of summary statistics

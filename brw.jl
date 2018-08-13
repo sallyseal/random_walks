@@ -17,7 +17,7 @@ walkers = zeros(iterations)
 for i = 1:length(walkers)
 
     # Initialize vectors to store the xyz coordinates the size of nsteps
-    nsteps = 100
+    nsteps = 200
     x = zeros(nsteps)
     y = zeros(nsteps)
     z = zeros(nsteps)
@@ -52,9 +52,9 @@ for i = 1:length(walkers)
     source = (r, theta, phi)
     btheta = source[2]
     bphi = source[3]
-    println("source point: ", source)
-    println("btheta: ", btheta)
-    println("bphi: ", bphi)
+    # println("source point: ", source)
+    # println("btheta: ", btheta)
+    # println("bphi: ", bphi)
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -66,12 +66,13 @@ for i = 1:length(walkers)
 
         # Creating a random point in 3D
         # k = concentration, the higher k, the more biased the random walk
-        k = 5
+        k = 7
         r = rand(TruncatedNormal(0,1,0,1))
         theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
         theta = theta[1]
         phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
         phi = phi[1]
+        println(theta)
 
         # Mapping spherical coordinates onto the cartesian plane
         dx = r*sin(theta)*cos(phi);
@@ -164,15 +165,10 @@ for i = 1:length(walkers)
     fig = plt.figure()
     ax = fig[:add_subplot](111, projection="3d")
     ax[:plot](x, y, z)
-    PyPlot.title("Shape of Random Walk")
-
-    # Plot squared displacement against time
-
-    # x = (time); y = (displacements);
-    # plt1 = Plots.plot(x,y)
-    # display(plt1)
-
-
+    # PyPlot.title("Shape of Random Walk")
+    PyPlot.xlabel("x")
+    PyPlot.ylabel("y")
+    PyPlot.zlabel("z")
 end
 
 # Calculate the mean of summary statistics
@@ -188,7 +184,7 @@ println("rw sinuosity average: ", rw_sinuosity_mu)
 # a = rw_si
 # plot1 = PyPlot.plt[:hist](a)
 # PyPlot.xlabel("Straightness Index")
-# PyPlot.title("Randon Walk Straightness Index Histogram")
+# PyPlot.title("Random Walk Straightness Index Histogram")
 
 # a_cart = rw_si_cart
 # plot1 = PyPlot.plt[:hist](a_cart)

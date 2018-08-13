@@ -1,10 +1,9 @@
 # This script does the same as script rw_simulations.jl
-# Here we attempt to infer the variance of the theta and phi distributions
-# It's an attempt to infer how persistent the random walkl is
-# Sample variance from a uniform distribution between 0 and 1.5?
-# Ask Michael about range of variance?
-# All other parameters such as step length etc. stay constant
-# Step length constant at 0.5 mean with variance = 0.1
+# Here we attempt to infer k of the theta an phi von Mises distributions
+# This is a way to infer how bias the random walk is
+# Sample k from a uniform distribution between 0 and 20?
+# Check when the rw looks ver biased and then use that k value as the max (20)
+# Keep all other parameters constant between mock and simulated data
 
 using Distributions;
 using PyPlot;
@@ -15,6 +14,9 @@ using PyPlot;
 # Create vectors to store the average SI and S for 10x RWs
 SI_av = Float64[]
 S_av = Float64[]
+
+# Set the level or bias higher by increasing k
+k = 2
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -37,25 +39,19 @@ for i = 1:length(walks)
     time = Float64[]
     turn_angles = Float64[]
 
-    # Bounds for distributions
-    lower_t = 0
-    upper_t = pi
-    lower_p = 0
-    upper_p = 2*pi
-
     # Create starting position of the RW at the origin
     x[1] = 0.0;
     y[1] = 0.0;
     z[1] = 0.0;
 
-    # Sample first random point in 3D
-    r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
+    # Sample a random point that will be the source with r = pi
+    r = pi
     theta = acos(1-2*rand()) # theta between 0:pi radians
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-    # This is what we want to try to INFER
-    # FOR THE PERSISTENCE: variance of theta and phi distributions
-    sigma = 2 # Can control the tightness/spread of the distribution by altering
+    source = (r, theta, phi)
+    btheta = source[2]
+    bphi = source[3]
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -65,24 +61,17 @@ for i = 1:length(walks)
         # Update the time
         t = t+t_next_jump
 
-        # Create variables for updating the distributions
-        mu_t = theta
-        mu_p = phi
-
-        # Create the distributions for theta and phi to sample next theta and phi
-        # Should these be halved?
-        # This should be sampled from wrapped normal distribution?
-        dist_theta = TruncatedNormal(theta, sigma, lower_t, upper_t)
-        dist_phi = TruncatedNormal(phi, sigma, lower_p, upper_p)
-
-        # Randomly sample from the distributions to get updated theta and phi to
-        # create next point in 3D space
-        theta = rand(dist_theta)
-        phi = rand(dist_phi)
-        # Here you can change the mean step length we are trying to infer
+        # Creating a random point in 3D
+        # k = concentration, the higher k, the more biased the random walk
+        # k = 1
+        # Here we want to try and infer the mean step length
         r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
+        theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
+        theta = theta[1]
+        phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
+        phi = phi[1]
 
-        # Map spherical point in 3D to the Cartesian Plane
+        # Mapping spherical coordinates onto the cartesian plane
         dx = r*sin(theta)*cos(phi);
         dy = r*sin(theta)*sin(phi);
         dz = r*cos(theta);
@@ -92,12 +81,13 @@ for i = 1:length(walks)
         y[i] = y[i-1] + dy
         z[i] = z[i-1] + dz
 
-        # Get the coordinate and previous coordinate
-        c_0 = x[i], y[i], z[i]
-        c_1 = x[i-1], y[i-1], z[i-1]
+        # Get the current [i] and previous [i-1] coordinates to calculate angle
+        # between the 2 vectors = turning angle
+        c_1 = x[i], y[i], z[i]
+        c_0 = x[i-1], y[i-1], z[i-1]
 
-        # Calculate the angle between this vector and previous vector
-        turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+        # Calculate the turning angle between this vector and previous vector
+        turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
         # Push to store all values associated with a coordinate
         push!(all_x, x[i])
@@ -147,7 +137,7 @@ println("mock data S_av: ", S_av)
 # Create vectors to store deltas for summary stats and mean values used to gen ss
 delta_SI = Float64[]
 delta_S = Float64[]
-variance = Float64[]
+ks = Float64[]
 
 # Repeat simulation 10 000x
 for i in 1:500
@@ -159,10 +149,10 @@ for i in 1:500
     SI_prime_av = Float64[]
     S_prime_av = Float64[]
 
-    # Sample variance mean from uniform dist between 0 & 1.5 save value to variance
-    # Check with Michael on the variance range???
-    v = rand(Uniform(0,2))
-    push!(variance, v)
+    # Sample k from uniform dist between 0 & 20? save value to means
+    # Check how to use Truncated uniform distribution
+    k_prime = rand(Uniform(0,10))
+    push!(ks, k_prime)
 
     random_walks = 10
     walks = zeros(random_walks)
@@ -185,24 +175,19 @@ for i in 1:500
         time = Float64[]
         turn_angles = Float64[]
 
-        # Bounds for distributions
-        lower_t = 0
-        upper_t = pi
-        lower_p = 0
-        upper_p = 2*pi
-
         # Create starting position of the RW at the origin
         x[1] = 0.0;
         y[1] = 0.0;
         z[1] = 0.0;
 
-        # Sample first random point in 3D
-        r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
+        # Sample a random point that will be the source with r = pi
+        r = pi
         theta = acos(1-2*rand()) # theta between 0:pi radians
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-        # FOR THE PERSISTENCE: variance
-        sigma = v # Can control the tightness/spread of the distribution by altering
+        source = (r, theta, phi)
+        btheta = source[2]
+        bphi = source[3]
 
         # Perform a RW of nsteps
         for i = 2:length(x)
@@ -212,24 +197,17 @@ for i in 1:500
             # Update the time
             t = t+t_next_jump
 
-            # Create variables for updating the distributions
-            mu_t = theta
-            mu_p = phi
-
-            # Create the distributions for theta and phi to sample next theta and phi
-            # Should these be halved?
-            # This should be sampled from wrapped normal distribution?
-            dist_theta = TruncatedNormal(theta, sigma, lower_t, upper_t)
-            dist_phi = TruncatedNormal(phi, sigma, lower_p, upper_p)
-
-            # Randomly sample from the distributions to get updated theta and phi to
-            # create next point in 3D space
-            theta = rand(dist_theta)
-            phi = rand(dist_phi)
-            # Here we insert the randomly sampled mean between 0 and 1
+            # Creating a random point in 3D
+            # k = concentration, the higher k, the more biased the random walk
+            # k = 1
+            # Here we want to try and infer the mean step length
             r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
+            theta = rand(VonMises(btheta, k_prime),1)      # theta between 0:pi radians
+            theta = theta[1]
+            phi = rand(VonMises(bphi, k_prime),1)          # phi between 0:2*pi radians
+            phi = phi[1]
 
-            # Map spherical point in 3D to the Cartesian Plane
+            # Mapping spherical coordinates onto the cartesian plane
             dx = r*sin(theta)*cos(phi);
             dy = r*sin(theta)*sin(phi);
             dz = r*cos(theta);
@@ -239,12 +217,13 @@ for i in 1:500
             y[i] = y[i-1] + dy
             z[i] = z[i-1] + dz
 
-            # Get the coordinate and previous coordinate
-            c_0 = x[i], y[i], z[i]
-            c_1 = x[i-1], y[i-1], z[i-1]
+            # Get the current [i] and previous [i-1] coordinates to calculate angle
+            # between the 2 vectors = turning angle
+            c_1 = x[i], y[i], z[i]
+            c_0 = x[i-1], y[i-1], z[i-1]
 
-            # Calculate the angle between this vector and previous vector
-            turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+            # Calculate the turning angle between this vector and previous vector
+            turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
             # Push to store all values associated with a coordinate
             push!(all_x, x[i])
@@ -309,20 +288,20 @@ end
 # PyPlot.xlabel("Sinuosity Delta Distribution")
 # PyPlot.title("Difference in sinuosity between mock and simulated data")
 
-# Plot deltas against v' where deltas are the dependent variables and v' indep
+# Plot deltas against m' where deltas are the dependent variables and m' indep
 # dependent var: y axis (SI or S)
-# independent var: x axis (v')
-# x = variance
-# y = delta_SI
-# PyPlot.xlabel("v' values")
-# PyPlot.ylabel("Delta SI")
-# scatter(x,y)
-
-x = variance
-y = delta_S
-PyPlot.xlabel("v' values")
-PyPlot.ylabel("Delta for S")
-# scatter(x,y, xlim(-0.1,0.05))
+# independent var: x axis (m')
+x = ks
+y = delta_SI
+PyPlot.xlabel("k' values")
+PyPlot.ylabel("Delta SI")
 scatter(x,y)
 
-println("mean v' value: ", mean(variance))
+# x = ks
+# y = delta_S
+# PyPlot.xlabel("k' values")
+# PyPlot.ylabel("Delta S")
+# # scatter(x,y, xlim(-0.1,0.05))
+# scatter(x,y)
+
+println("mean k' value: ", mean(ks))

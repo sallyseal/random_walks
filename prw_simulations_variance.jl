@@ -8,7 +8,7 @@
 
 using Distributions;
 using PyPlot;
-
+using StatsBase;
 # Generate the mock data (10x RWs of 100 steps each) and get summary statistics
 ########## MOCK DATA ##########
 
@@ -55,7 +55,7 @@ for i = 1:length(walks)
 
     # This is what we want to try to INFER
     # FOR THE PERSISTENCE: variance of theta and phi distributions
-    sigma = 2 # Can control the tightness/spread of the distribution by altering
+    sigma = 0.1 # Can control the tightness/spread of the distribution by altering
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -150,7 +150,7 @@ delta_S = Float64[]
 variance = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:500
+for i in 1:100
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -184,6 +184,8 @@ for i in 1:500
         all_r = Float64[]
         time = Float64[]
         turn_angles = Float64[]
+        all_theta = Float64[]
+        all_phi = Float64[]
 
         # Bounds for distributions
         lower_t = 0
@@ -253,6 +255,8 @@ for i in 1:500
             push!(all_r, r)
             push!(time, t)
             push!(turn_angles, turn_angle)
+            push!(all_theta, theta)
+            push!(all_phi, phi)
         end
 
         # Calculate simulated summary statistics
@@ -326,3 +330,15 @@ PyPlot.ylabel("Delta for S")
 scatter(x,y)
 
 println("mean v' value: ", mean(variance))
+
+p_SI_1 = percentile(delta_SI, 1)
+println("p_SI_1: ", p_SI_1)
+
+p_SI_01 = percentile(delta_SI, 0.1)
+println("p_SI_01: ", p_SI_01)
+
+p_S_1 = percentile(delta_S, 1)
+println("p_S_1: ", p_S_1)
+
+p_S_01 = percentile(delta_S, 0.1)
+println("p_S_01: ", p_S_01)

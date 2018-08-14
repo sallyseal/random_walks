@@ -3,7 +3,7 @@
 
 using Distributions;
 using PyPlot;
-
+using StatsBase;
 # Generate the mock data (10x RWs of 100 steps each) and get summary statistics
 ########## MOCK DATA ##########
 
@@ -12,7 +12,7 @@ SI_av = Float64[]
 S_av = Float64[]
 
 # Set the level or bias higher by increasing k
-k = 15
+k = 10
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -61,7 +61,7 @@ for i = 1:length(walks)
         # k = concentration, the higher k, the more biased the random walk
         # k = 1
         # Here we want to try and infer the mean step length
-        r = rand(TruncatedNormal(0.1, 0.1, 0, 1))
+        r = rand(TruncatedNormal(0.3, 0.1, 0, 1))
         theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
         theta = theta[1]
         phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
@@ -274,12 +274,12 @@ end
 # Plot the distribution of the deltas for SI and S
 
 # x_si = delta_SI
-# plot1 = PyPlot.plt[:hist](x_si; bins=50)
+# plot1 = PyPlot.plt[:hist](x_si; bins=100)
 # PyPlot.xlabel("Straightness Index Delta Distribution")
 # PyPlot.title("Difference in SI between mock and simulated data")
 
 # x_s = delta_S
-# plot2 = PyPlot.plt[:hist](x_s; bins=50)
+# plot2 = PyPlot.plt[:hist](x_s; bins=100)
 # PyPlot.xlabel("Sinuosity Delta Distribution")
 # PyPlot.title("Difference in sinuosity between mock and simulated data")
 
@@ -300,3 +300,15 @@ PyPlot.ylabel("Delta for S")
 scatter(x,y)
 
 println("mean m' value: ", mean(means))
+
+p_SI_1 = percentile(delta_SI, 1)
+println("p_SI_1: ", p_SI_1)
+
+p_SI_01 = percentile(delta_SI, 0.1)
+println("p_SI_01: ", p_SI_01)
+
+p_S_1 = percentile(delta_S, 1)
+println("p_S_1: ", p_S_1)
+
+p_S_01 = percentile(delta_S, 0.1)
+println("p_S_01: ", p_S_01)

@@ -12,12 +12,12 @@ rw_sinuosity = Float64[]
 # rw_D = Float64[]
 
 # Number of iterations to perform of an nstep random walk
-iterations = 1
+iterations = 1000
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
     # Initialize vectors to store the xyz coordinates the size of nsteps
-    nsteps = 200
+    nsteps = 100
     x = zeros(nsteps)
     y = zeros(nsteps)
     z = zeros(nsteps)
@@ -54,7 +54,7 @@ for i = 1:length(walkers)
 
         # Creating a random point in 3D
         # Average step length = 0.5 with variance of 0.5
-        r = rand(TruncatedNormal(0.8,0.2,0,1))
+        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
         theta = acos(1-2*rand()) # theta between 0:pi radians
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
@@ -143,20 +143,20 @@ for i = 1:length(walkers)
 
     # Plotting RW for each iteration
     # Uncomment the below if you want to visualise each walk
-    using PyPlot; const plt = PyPlot
-    PyPlot.PyObject(PyPlot.axes3D)
-
-    x = x
-    y = y
-    z = z
-
-    fig = plt.figure()
-    ax = fig[:add_subplot](111, projection="3d")
-    ax[:plot](x, y, z)
-    # PyPlot.title("Shape of Random Walk")
-    PyPlot.xlabel("x")
-    PyPlot.ylabel("y")
-    PyPlot.zlabel("z")
+    # using PyPlot; const plt = PyPlot
+    # PyPlot.PyObject(PyPlot.axes3D)
+    #
+    # x = x
+    # y = y
+    # z = z
+    #
+    # fig = plt.figure()
+    # ax = fig[:add_subplot](111, projection="3d")
+    # ax[:plot](x, y, z)
+    # # PyPlot.title("Shape of Random Walk")
+    # PyPlot.xlabel("x")
+    # PyPlot.ylabel("y")
+    # PyPlot.zlabel("z")
 end
 
 # Calculate the mean of summary statistics
@@ -180,7 +180,7 @@ println("rw sinuosity average: ", rw_sinuosity_mu)
 # PyPlot.title("Random Walk Straightness Index Cartesian")
 
 # Plotting distributions of the sinuosity
-# b = rw_sinuosity
-# plot2 = PyPlot.plt[:hist](b)
-# PyPlot.xlabel("Sinuosity")
-# PyPlot.title("Randon Walk Sinuosity Histogram")
+b = rw_sinuosity
+plot2 = PyPlot.plt[:hist](b, alpha=0.4)
+PyPlot.xlabel("Sinuosity")
+PyPlot.title("Randon Walk Sinuosity Histogram")

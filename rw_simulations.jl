@@ -13,6 +13,7 @@
 
 using Distributions;
 using PyPlot;
+using StatsBase;
 # import Plots;
 
 # Generate the mock data (10x RWs of 100 steps each) and get summary statistics
@@ -57,7 +58,7 @@ for i = 1:length(walks)
         t = t+t_next_jump
 
         # Creating a random point in 3D
-        r = rand(TruncatedNormal(0.1, 0.1, 0, 1))
+        r = rand(TruncatedNormal(0.2, 0.1, 0, 1))
         theta = acos(1-2*rand())                # theta between 0:pi radians
         phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
@@ -130,7 +131,7 @@ delta_S = Float64[]
 means = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:10000
+for i in 1:1000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -258,14 +259,14 @@ end
 # PLOTTING
 # Plot the distribution of the deltas for SI and S
 
-x_si = delta_SI
-plot1 = PyPlot.plt[:hist](x_si; bins=80)
-PyPlot.xlabel("Delta SI")
-PyPlot.ylabel("Density")
-PyPlot.title("Difference in Straightness Index between mock and simulated data: RW")
+# x_si = delta_SI
+# plot1 = PyPlot.plt[:hist](x_si; bins=100)
+# PyPlot.xlabel("Delta SI")
+# PyPlot.ylabel("Density")
+# PyPlot.title("Difference in Straightness Index between mock and simulated data: RW")
 
 # x_s = delta_S
-# plot2 = PyPlot.plt[:hist](x_s; bins=50)
+# plot2 = PyPlot.plt[:hist](x_s; bins=100)
 # PyPlot.xlabel("Sinuosity Delta Distribution")
 # PyPlot.title("Difference in sinuosity between mock and simulated data")
 
@@ -276,11 +277,25 @@ PyPlot.title("Difference in Straightness Index between mock and simulated data: 
 # PyPlot.ylabel("Delta for SI")
 # scatter(x,y)
 
-# x = means
-# y = delta_S
-# PyPlot.xlabel("m' values")
-# PyPlot.ylabel("Delta for S")
-# # scatter(x,y, xlim(-0.1,0.05))
-# scatter(x,y)
+x = means
+y = delta_S
+PyPlot.xlabel("m' values")
+PyPlot.ylabel("Delta for S")
+# scatter(x,y, xlim(-0.1,0.05))
+scatter(x,y)
 
 println("mean m' value: ", mean(means))
+
+# Calculate the 1 and 0.1 percentile of SI and S
+
+p_SI_1 = percentile(delta_SI, 1)
+println("p_SI_1: ", p_SI_1)
+
+p_SI_01 = percentile(delta_SI, 0.1)
+println("p_SI_01: ", p_SI_01)
+
+p_S_1 = percentile(delta_S, 1)
+println("p_S_1: ", p_S_1)
+
+p_S_01 = percentile(delta_S, 0.1)
+println("p_S_01: ", p_S_01)

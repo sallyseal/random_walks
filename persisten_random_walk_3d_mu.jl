@@ -9,7 +9,6 @@
 using Gadfly;
 using Distributions;
 using PyPlot;
-using Plotly;
 using StatPlots;
 
 # List of summary statistics to plot
@@ -17,12 +16,12 @@ prw_si = Float64[]
 prw_si_cart = Float64[]
 prw_sinuosity = Float64[]
 
-iterations = 1
+iterations = 1000
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
     # Initialize vectors the size of nsteps
-    nsteps = 150
+    nsteps = 100
     x = zeros(nsteps)
     y = zeros(nsteps)
     z = zeros(nsteps)
@@ -57,13 +56,13 @@ for i = 1:length(walkers)
     z[1] = 0.0;
 
     # Sample first random point in 3D
-    r = rand(TruncatedNormal(0,1,0,1)) # Adam uses log normal?
+    r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
     theta = acos(1-2*rand()) # theta between 0:pi radians
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
     # FOR THE PERSISTENCE: variance
-    sigma_t = 0.2 # Can control the tightness/spread of the distribution by altering
-    sigma_p = 0.2 # Can control the tightness/spread of the distribution by altering
+    sigma_t = 0.1 # Can control the tightness/spread of the distribution by altering
+    sigma_p = 0.1 # Can control the tightness/spread of the distribution by altering
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -87,7 +86,7 @@ for i = 1:length(walkers)
         # create next point in 3D space
         theta = rand(dist_theta)
         phi = rand(dist_phi)
-        r = rand(TruncatedNormal(0,1,0,1))
+        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
 
         # Calculate dtheta and dphi: angle between new and old theta and phi
         # Or should this rahter be dot product
@@ -167,20 +166,20 @@ for i = 1:length(walkers)
     push!(prw_sinuosity, sinuosity)
 
     # Plotting each RW - uncomment if want to see this
-    using PyPlot; const plt = PyPlot
-    PyPlot.PyObject(PyPlot.axes3D)
-
-    x = x
-    y = y
-    z = z
-
-    fig = plt.figure()
-    ax = fig[:add_subplot](111, projection="3d")
-    ax[:plot](x, y, z)
-    # PyPlot.title("Shape of Persistent Random Walk")
-    PyPlot.xlabel("x")
-    PyPlot.ylabel("y")
-    PyPlot.zlabel("z")
+    # using PyPlot; const plt = PyPlot
+    # PyPlot.PyObject(PyPlot.axes3D)
+    #
+    # x = x
+    # y = y
+    # z = z
+    #
+    # fig = plt.figure()
+    # ax = fig[:add_subplot](111, projection="3d")
+    # ax[:plot](x, y, z)
+    # # PyPlot.title("Shape of Persistent Random Walk")
+    # PyPlot.xlabel("x")
+    # PyPlot.ylabel("y")
+    # PyPlot.zlabel("z")
 end
 
 # Calculate the mean of summary statistics
@@ -203,7 +202,7 @@ println("prw sinuosity average: ", prw_sinuosity_mu)
 # PyPlot.title("Randon Walk Straightness Index Cartesian")
 
 # Plotting distributions of the sinuosity
-# b = prw_sinuosity
-# plot2 = PyPlot.plt[:hist](b)
-# PyPlot.xlabel("Sinuosity")
-# PyPlot.title("Persistent Randon Walk Sinuosity Histogram")
+b = prw_sinuosity
+plot2 = PyPlot.plt[:hist](b, alpha=0.4)
+PyPlot.xlabel("Sinuosity")
+PyPlot.title("Persistent Randon Walk Sinuosity Histogram")

@@ -1,22 +1,20 @@
-# This script does the same as script rw_simulations.jl
-# Here we attempt to infer k of the theta an phi von Mises distributions
-# This is a way to infer how bias the random walk is
-# Sample k from a uniform distribution between 0 and 20?
-# Check when the rw looks ver biased and then use that k value as the max (20)
-# Keep all other parameters constant between mock and simulated data
+# Script follows same process as rw_simulations, but once we have the list of
+# m' values and associated delta_S and delta_SI we iterate over the delta list
+# and m' list with zip and if delta <= epsilon then we push the associated m'
+# value to the list accepted_m which is the posterior distribution
+
+# We test epsilon for the 1 and 0.1 percentiles
 
 using Distributions;
 using PyPlot;
 using StatsBase;
+using PyCall, PyPlot; @pyimport seaborn as sns
 # Generate the mock data (10x RWs of 100 steps each) and get summary statistics
 ########## MOCK DATA ##########
 
 # Create vectors to store the average SI and S for 10x RWs
 SI_av = Float64[]
 S_av = Float64[]
-
-# Set the level or bias higher by increasing k
-k = 10
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -44,15 +42,6 @@ for i = 1:length(walks)
     y[1] = 0.0;
     z[1] = 0.0;
 
-    # Sample a random point that will be the source with r = pi
-    r = pi
-    theta = acos(1-2*rand()) # theta between 0:pi radians
-    phi = 2*pi*rand()        # phi between 0:2*pi radians
-
-    source = (r, theta, phi)
-    btheta = source[2]
-    bphi = source[3]
-
     # Perform a RW of nsteps
     for i = 2:length(x)
 
@@ -62,14 +51,9 @@ for i = 1:length(walks)
         t = t+t_next_jump
 
         # Creating a random point in 3D
-        # k = concentration, the higher k, the more biased the random walk
-        # k = 1
-        # Here we want to try and infer the mean step length
-        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
-        theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
-        theta = theta[1]
-        phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
-        phi = phi[1]
+        r = rand(TruncatedNormal(0.7, 0.1, 0, 1))
+        theta = acos(1-2*rand())                # theta between 0:pi radians
+        phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
         # Mapping spherical coordinates onto the cartesian plane
         dx = r*sin(theta)*cos(phi);
@@ -137,10 +121,10 @@ println("mock data S_av: ", S_av)
 # Create vectors to store deltas for summary stats and mean values used to gen ss
 delta_SI = Float64[]
 delta_S = Float64[]
-ks = Float64[]
+means = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:1000
+for i in 1:100000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -149,10 +133,9 @@ for i in 1:1000
     SI_prime_av = Float64[]
     S_prime_av = Float64[]
 
-    # Sample k from uniform dist between 0 & 20? save value to means
-    # Check how to use Truncated uniform distribution
-    k_prime = rand(Uniform(0,20))
-    push!(ks, k_prime)
+    # Sample step length mean from uniform dist between 0 & 1 save value to means
+    m = rand()
+    push!(means, m)
 
     random_walks = 10
     walks = zeros(random_walks)
@@ -180,15 +163,6 @@ for i in 1:1000
         y[1] = 0.0;
         z[1] = 0.0;
 
-        # Sample a random point that will be the source with r = pi
-        r = pi
-        theta = acos(1-2*rand()) # theta between 0:pi radians
-        phi = 2*pi*rand()        # phi between 0:2*pi radians
-
-        source = (r, theta, phi)
-        btheta = source[2]
-        bphi = source[3]
-
         # Perform a RW of nsteps
         for i = 2:length(x)
 
@@ -198,14 +172,9 @@ for i in 1:1000
             t = t+t_next_jump
 
             # Creating a random point in 3D
-            # k = concentration, the higher k, the more biased the random walk
-            # k = 1
-            # Here we want to try and infer the mean step length
-            r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
-            theta = rand(VonMises(btheta, k_prime),1)      # theta between 0:pi radians
-            theta = theta[1]
-            phi = rand(VonMises(bphi, k_prime),1)          # phi between 0:2*pi radians
-            phi = phi[1]
+            r = rand(TruncatedNormal(m, 0.1, 0, 1))
+            theta = acos(1-2*rand())                # theta between 0:pi radians
+            phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
             # Mapping spherical coordinates onto the cartesian plane
             dx = r*sin(theta)*cos(phi);
@@ -263,6 +232,8 @@ for i in 1:1000
     end
     SI_prime_av = mean(SI_prime_av)
     S_prime_av = mean(S_prime_av)
+    # println(SI_prime_av)
+    # println(S_prime_av)
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
@@ -275,45 +246,79 @@ for i in 1:1000
     push!(delta_S, difference_s)
 end
 
-# PLOTTING
-# Plot the distribution of the deltas for SI and S
 
-# x_si = delta_SI
-# plot1 = PyPlot.plt[:hist](x_si; bins=50)
-# PyPlot.xlabel("Straightness Index Delta Distribution")
-# PyPlot.title("Difference in SI between mock and simulated data")
+# EPSILON CALCULATIONS
+# Calculate the 1 and 0.1 percentile of SI and S to generate the epsilon values
+e_SI_1 = percentile(delta_SI, 1)
+println("e_SI_1: ", e_SI_1)
 
-# x_s = delta_S
-# plot2 = PyPlot.plt[:hist](x_s; bins=50)
-# PyPlot.xlabel("Sinuosity Delta Distribution")
-# PyPlot.title("Difference in sinuosity between mock and simulated data")
+e_SI_01 = percentile(delta_SI, 0.1)
+println("e_SI_01: ", e_SI_01)
 
-# Plot deltas against m' where deltas are the dependent variables and m' indep
-# dependent var: y axis (SI or S)
-# independent var: x axis (m')
-# x = ks
-# y = delta_SI
-# PyPlot.xlabel("k' values")
-# PyPlot.ylabel("Delta SI")
-# scatter(x,y)
+e_S_1 = percentile(delta_S, 1)
+println("e_S_1: ", e_S_1)
 
-x = ks
-y = delta_S
-PyPlot.xlabel("k' values")
-PyPlot.ylabel("Delta S")
-# scatter(x,y, xlim(-0.1,0.05))
-scatter(x,y)
+e_S_01 = percentile(delta_S, 0.1)
+println("e_S_01: ", e_S_01)
 
-println("mean k' value: ", mean(ks))
 
-p_SI_1 = percentile(delta_SI, 1)
-println("p_SI_1: ", p_SI_1)
+# CALCULATING THE ACCEPTED M' VALUES FOR PLOTTING
+accepted_m = Float64[]
 
-p_SI_01 = percentile(delta_SI, 0.1)
-println("p_SI_01: ", p_SI_01)
+zipped_SI = zip(delta_SI, means)
+zipped_S = zip(delta_S, means)
 
-p_S_1 = percentile(delta_S, 1)
-println("p_S_1: ", p_S_1)
+# PLOTTING THE POSTERIOR DISTRIBUTION OF THE MEAN STEP LENGTH
+# Plot the posterior distribution of the mean step length using S and SI each
+# time using 1 and 0.1 percnetiles
 
-p_S_01 = percentile(delta_S, 0.1)
-println("p_S_01: ", p_S_01)
+# 1. SI_1
+# for i in zipped_SI
+#     if i[1] <= e_SI_1
+#         push!(accepted_m, i[2])
+#     end
+# end
+# x = accepted_m
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution")
+
+# 2. SI_0.1
+# for i in zipped_SI
+#     if i[1] <= e_SI_01
+#         push!(accepted_m, i[2])
+#     end
+# end
+# x = accepted_m
+# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
+# PyPlot.xlabel("Mean Step Length")
+# PyPlot.ylabel("Density")
+# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 0.1p")
+
+# 3. S_1
+for i in zipped_S
+    if i[1] <= e_S_1
+        push!(accepted_m, i[2])
+    end
+end
+x = accepted_m
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+ax[:set_xlim]([0,1])
+ax[:set_title]("Mean Step Length Posterior Distribution: S_1")
+
+# 4. S_0.1
+# for i in zipped_S
+#     if i[1] <= e_S_01
+#         push!(accepted_m, i[2])
+#     end
+# end
+# x = accepted_m
+# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
+# PyPlot.xlabel("Mean Step Length")
+# PyPlot.ylabel("Density")
+# PyPlot.title("Mean Step Length Posterior Distribution: S: e = 0.1p")
+
+println("size m': ", size(means))
+println("size accepted_m: ", size(accepted_m))

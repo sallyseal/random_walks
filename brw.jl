@@ -12,12 +12,12 @@ rw_sinuosity = Float64[]
 # rw_D = Float64[]
 
 # Number of iterations to perform of an nstep random walk
-iterations = 1
+iterations = 1000
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
     # Initialize vectors to store the xyz coordinates the size of nsteps
-    nsteps = 200
+    nsteps = 100
     x = zeros(nsteps)
     y = zeros(nsteps)
     z = zeros(nsteps)
@@ -66,13 +66,12 @@ for i = 1:length(walkers)
 
         # Creating a random point in 3D
         # k = concentration, the higher k, the more biased the random walk
-        k = 7
-        r = rand(TruncatedNormal(0,1,0,1))
+        k = 20
+        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
         theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
         theta = theta[1]
         phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
         phi = phi[1]
-        println(theta)
 
         # Mapping spherical coordinates onto the cartesian plane
         dx = r*sin(theta)*cos(phi);
@@ -155,20 +154,20 @@ for i = 1:length(walkers)
 
     # Plotting RW for each iteration
     # Uncomment the below if you want to visualise each walk
-    using PyPlot; const plt = PyPlot
-    PyPlot.PyObject(PyPlot.axes3D)
-
-    x = x
-    y = y
-    z = z
-
-    fig = plt.figure()
-    ax = fig[:add_subplot](111, projection="3d")
-    ax[:plot](x, y, z)
-    # PyPlot.title("Shape of Random Walk")
-    PyPlot.xlabel("x")
-    PyPlot.ylabel("y")
-    PyPlot.zlabel("z")
+    # using PyPlot; const plt = PyPlot
+    # PyPlot.PyObject(PyPlot.axes3D)
+    #
+    # x = x
+    # y = y
+    # z = z
+    #
+    # fig = plt.figure()
+    # ax = fig[:add_subplot](111, projection="3d")
+    # ax[:plot](x, y, z)
+    # # PyPlot.title("Shape of Random Walk")
+    # PyPlot.xlabel("x")
+    # PyPlot.ylabel("y")
+    # PyPlot.zlabel("z")
 end
 
 # Calculate the mean of summary statistics
@@ -187,12 +186,12 @@ println("rw sinuosity average: ", rw_sinuosity_mu)
 # PyPlot.title("Random Walk Straightness Index Histogram")
 
 # a_cart = rw_si_cart
-# plot1 = PyPlot.plt[:hist](a_cart)
+# plot1 = PyPlot.plt[:hist](a_cart, alpha=0.5)
 # PyPlot.xlabel("Straightness Index")
 # PyPlot.title("Randon Walk Straightness Index Cartesian")
 
 # Plotting distributions of the sinuosity
-# b = rw_sinuosity
-# plot2 = PyPlot.plt[:hist](b)
-# PyPlot.xlabel("Sinuosity")
-# PyPlot.title("Randon Walk Sinuosity Histogram")
+b = rw_sinuosity
+plot2 = PyPlot.plt[:hist](b, alpha=0.4)
+PyPlot.xlabel("Sinuosity")
+PyPlot.title("Random Walk Sinuosity Histogram")

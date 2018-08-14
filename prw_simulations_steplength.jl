@@ -5,7 +5,7 @@
 
 using Distributions;
 using PyPlot;
-
+using StatsBase;
 # Generate the mock data (10x RWs of 100 steps each) and get summary statistics
 ########## MOCK DATA ##########
 
@@ -147,7 +147,7 @@ delta_S = Float64[]
 means = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:1000
+for i in 1:10000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -198,8 +198,7 @@ for i in 1:1000
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
         # FOR THE PERSISTENCE: variance
-        sigma_t = 0.1 # Can control the tightness/spread of the distribution by altering
-        sigma_p = 0.1 # Can control the tightness/spread of the distribution by altering
+        sigma = 0.1 # Can control the tightness/spread of the distribution by altering
 
         # Perform a RW of nsteps
         for i = 2:length(x)
@@ -216,8 +215,8 @@ for i in 1:1000
             # Create the distributions for theta and phi to sample next theta and phi
             # Should these be halved?
             # This should be sampled from wrapped normal distribution?
-            dist_theta = TruncatedNormal(theta, sigma_t, lower_t, upper_t)
-            dist_phi = TruncatedNormal(phi, sigma_p, lower_p, upper_p)
+            dist_theta = TruncatedNormal(theta, sigma, lower_t, upper_t)
+            dist_phi = TruncatedNormal(phi, sigma, lower_p, upper_p)
 
             # Randomly sample from the distributions to get updated theta and phi to
             # create next point in 3D space
@@ -297,23 +296,23 @@ end
 # Plot the distribution of the deltas for SI and S
 
 # x_si = delta_SI
-# plot1 = PyPlot.plt[:hist](x_si; bins=50)
+# plot1 = PyPlot.plt[:hist](x_si; bins=100)
 # PyPlot.xlabel("Straightness Index Delta Distribution")
 # PyPlot.title("Difference in SI between mock and simulated data")
 
 # x_s = delta_S
-# plot2 = PyPlot.plt[:hist](x_s; bins=50)
+# plot2 = PyPlot.plt[:hist](x_s; bins=100)
 # PyPlot.xlabel("Sinuosity Delta Distribution")
 # PyPlot.title("Difference in sinuosity between mock and simulated data")
 
 # Plot deltas against m' where deltas are the dependent variables and m' indep
 # dependent var: y axis (SI or S)
 # independent var: x axis (m')
-x = means
-y = delta_SI
-PyPlot.xlabel("m' values")
-PyPlot.ylabel("Delta SI")
-scatter(x,y)
+# x = means
+# y = delta_SI
+# PyPlot.xlabel("m' values")
+# PyPlot.ylabel("Delta SI")
+# scatter(x,y)
 
 # x = means
 # y = delta_S
@@ -323,3 +322,33 @@ scatter(x,y)
 # scatter(x,y)
 
 println("mean m' value: ", mean(means))
+
+p_SI_1 = percentile(delta_SI, 1)
+println("p_SI_1: ", p_SI_1)
+
+p_SI_01 = percentile(delta_SI, 0.1)
+println("p_SI_01: ", p_SI_01)
+
+p_S_1 = percentile(delta_S, 1)
+println("p_S_1: ", p_S_1)
+
+p_S_01 = percentile(delta_S, 0.1)
+println("p_S_01: ", p_S_01)
+
+# Additional plot requested by Michael
+# distance vs. theta vs. phi - can we infer persistence from this?
+
+# using PyPlot; const plt = PyPlot
+#   PyPlot.PyObject(PyPlot.axes3D)
+#
+#   x = x
+#   y = y
+#   z = z
+#
+#   fig = plt.figure()
+#   ax = fig[:add_subplot](111, projection="3d")
+#   ax[:plot](x, y, z)
+#   # PyPlot.title("Shape of Random Walk")
+#   PyPlot.xlabel("x")
+#   PyPlot.ylabel("y")
+#   PyPlot.zlabel("z")

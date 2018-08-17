@@ -51,7 +51,7 @@ for i = 1:length(walks)
         t = t+t_next_jump
 
         # Creating a random point in 3D
-        r = rand(TruncatedNormal(0.7, 0.1, 0, 1))
+        r = rand(TruncatedNormal(0.2, 0.1, 0, 1))
         theta = acos(1-2*rand())                # theta between 0:pi radians
         phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
@@ -124,7 +124,7 @@ delta_S = Float64[]
 means = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:100000
+for i in 1:50000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -273,16 +273,16 @@ zipped_S = zip(delta_S, means)
 # time using 1 and 0.1 percnetiles
 
 # 1. SI_1
-# for i in zipped_SI
-#     if i[1] <= e_SI_1
-#         push!(accepted_m, i[2])
-#     end
-# end
-# x = accepted_m
-# fig,ax = PyPlot.subplots()
-# sns.distplot(x, axlabel="Mean Step Length", color="salmon")
-# ax[:set_xlim]([0,1])
-# ax[:set_title]("Mean Step Length Posterior Distribution")
+for i in zipped_SI
+    if i[1] <= e_SI_1
+        push!(accepted_m, i[2])
+    end
+end
+x = accepted_m
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+ax[:set_xlim]([0,1])
+ax[:set_title]("Mean Step Length Posterior Distribution: SI_01")
 
 # 2. SI_0.1
 # for i in zipped_SI
@@ -297,16 +297,16 @@ zipped_S = zip(delta_S, means)
 # PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 0.1p")
 
 # 3. S_1
-for i in zipped_S
-    if i[1] <= e_S_1
-        push!(accepted_m, i[2])
-    end
-end
-x = accepted_m
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length", color="salmon")
-ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: S_1")
+# for i in zipped_S
+#     if i[1] <= e_S_1
+#         push!(accepted_m, i[2])
+#     end
+# end
+# x = accepted_m
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: S_1")
 
 # 4. S_0.1
 # for i in zipped_S

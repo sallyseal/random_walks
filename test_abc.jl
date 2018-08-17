@@ -46,15 +46,15 @@ for i = 1:length(walks)
     y[1] = 0.0;
     z[1] = 0.0;
 
-    # PARAMETER TO INFER: msl
-    msl = 0.7
+    # PARAMETER 1 TO INFER: msl
+    msl = 0.2
 
     # Sample first random point in 3D
     r = rand(TruncatedNormal(msl, 0.1, 0, 1)) # Adam uses log normal?
     theta = acos(1-2*rand()) # theta between 0:pi radians
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-    # FOR THE PERSISTENCE: variance
+    # PARAMETER 2 TO INFER: variance
     sigma = 0.1 # Can control the tightness/spread of the distribution by altering
 
     # Perform a RW of nsteps
@@ -148,9 +148,10 @@ println("mock data S_av: ", S_av)
 delta_SI = Float64[]
 delta_S = Float64[]
 means = Float64[]
+variance = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:90000
+for i in 1:100000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -160,8 +161,11 @@ for i in 1:90000
     S_prime_av = Float64[]
 
     # Sample step length mean from uniform dist between 0 & 1 save value to means
+    # Sample variance mean from uniform dist between 0 & 2 save value to variance
     m = rand()
     push!(means, m)
+    v = rand(Uniform(0,2))
+    push!(variance, v)
 
     random_walks = 10
     walks = zeros(random_walks)
@@ -201,7 +205,7 @@ for i in 1:90000
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
         # FOR THE PERSISTENCE: variance
-        sigma = 0.1 # Can control the tightness/spread of the distribution by altering
+        sigma = v # Can control the tightness/spread of the distribution by altering
 
         # Perform a RW of nsteps
         for i = 2:length(x)
@@ -312,9 +316,10 @@ println("e_S_01: ", e_S_01)
 
 # CALCULATING THE ACCEPTED M' VALUES FOR PLOTTING
 accepted_m = Float64[]
+accepted_v = Float64[]
 
-zipped_SI = zip(delta_SI, means)
-zipped_S = zip(delta_S, means)
+zipped_SI = zip(delta_SI, means, variance)
+zipped_S = zip(delta_S, means, variance)
 
 # PLOTTING THE POSTERIOR DISTRIBUTION OF THE MEAN STEP LENGTH
 # Plot the posterior distribution of the mean step length using S and SI each
@@ -324,13 +329,21 @@ zipped_S = zip(delta_S, means)
 # for i in zipped_SI
 #     if i[1] <= e_SI_1
 #         push!(accepted_m, i[2])
+#         push!(accepted_v, i[3])
 #     end
 # end
 # x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=100)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 1p")
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1")
+#
+# x = accepted_v
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
+
 
 # 2. SI_0.1
 # for i in zipped_SI
@@ -348,6 +361,7 @@ zipped_S = zip(delta_S, means)
 for i in zipped_S
     if i[1] <= e_S_1
         push!(accepted_m, i[2])
+        push!(accepted_v, i[3])
     end
 end
 x = accepted_m
@@ -355,6 +369,12 @@ fig,ax = PyPlot.subplots()
 sns.distplot(x, axlabel="Mean Step Length", color="salmon")
 ax[:set_xlim]([0,1])
 ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1")
+
+x = accepted_v
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
 
 # plot1 = PyPlot.plt[:hist](x; bins=200, alpha=0.4)
 # PyPlot.xlabel("Mean Step Length")
@@ -375,3 +395,6 @@ ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1")
 
 println("size m': ", size(means))
 println("size accepted_m: ", size(accepted_m))
+
+println("size v': ", size(variance))
+println("size accepted_v: ", size(accepted_v))

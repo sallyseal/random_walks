@@ -1,7 +1,9 @@
 # This script does the same as script rw_simulations.jl
-# Here we attempt to infer mean step length
-# We can also attempt to infer how persistent a random walk is - i.e. we can
-# attempt to infer the variance of the theta and phi distributions, respectively
+# Here we attempt to infer k of the theta an phi von Mises distributions
+# This is a way to infer how bias the random walk is
+# Sample k from a uniform distribution between 0 and 20?
+# Check when the rw looks ver biased and then use that k value as the max (20)
+# Keep all other parameters constant between mock and simulated data
 
 using Distributions;
 using PyPlot;
@@ -13,6 +15,9 @@ using PyCall, PyPlot; @pyimport seaborn as sns
 # Create vectors to store the average SI and S for 10x RWs
 SI_av = Float64[]
 S_av = Float64[]
+
+# Set the level or bias higher by increasing k
+k = 1
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -35,27 +40,19 @@ for i = 1:length(walks)
     time = Float64[]
     turn_angles = Float64[]
 
-    # Bounds for distributions
-    lower_t = 0
-    upper_t = pi
-    lower_p = 0
-    upper_p = 2*pi
-
     # Create starting position of the RW at the origin
     x[1] = 0.0;
     y[1] = 0.0;
     z[1] = 0.0;
 
-    # PARAMETER TO INFER: msl
-    msl = 0.7
-
-    # Sample first random point in 3D
-    r = rand(TruncatedNormal(msl, 0.1, 0, 1)) # Adam uses log normal?
+    # Sample a random point that will be the source with r = pi
+    r = pi
     theta = acos(1-2*rand()) # theta between 0:pi radians
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-    # FOR THE PERSISTENCE: variance
-    sigma = 0.1 # Can control the tightness/spread of the distribution by altering
+    source = (r, theta, phi)
+    btheta = source[2]
+    bphi = source[3]
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -65,24 +62,17 @@ for i = 1:length(walks)
         # Update the time
         t = t+t_next_jump
 
-        # Create variables for updating the distributions
-        mu_t = theta
-        mu_p = phi
+        # Creating a random point in 3D
+        # k = concentration, the higher k, the more biased the random walk
+        # k = 1
+        # Here we want to try and infer the mean step length
+        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
+        theta = rand(VonMises(btheta, k),1)      # theta between 0:pi radians
+        theta = theta[1]
+        phi = rand(VonMises(bphi, k),1)          # phi between 0:2*pi radians
+        phi = phi[1]
 
-        # Create the distributions for theta and phi to sample next theta and phi
-        # Should these be halved?
-        # This should be sampled from wrapped normal distribution?
-        dist_theta = TruncatedNormal(theta, sigma, lower_t, upper_t)
-        dist_phi = TruncatedNormal(phi, sigma, lower_p, upper_p)
-
-        # Randomly sample from the distributions to get updated theta and phi to
-        # create next point in 3D space
-        theta = rand(dist_theta)
-        phi = rand(dist_phi)
-        # Here you can change the mean step length we are trying to infer
-        r = rand(TruncatedNormal(msl, 0.1, 0, 1))
-
-        # Map spherical point in 3D to the Cartesian Plane
+        # Mapping spherical coordinates onto the cartesian plane
         dx = r*sin(theta)*cos(phi);
         dy = r*sin(theta)*sin(phi);
         dz = r*cos(theta);
@@ -92,12 +82,13 @@ for i = 1:length(walks)
         y[i] = y[i-1] + dy
         z[i] = z[i-1] + dz
 
-        # Get the coordinate and previous coordinate
-        c_0 = x[i], y[i], z[i]
-        c_1 = x[i-1], y[i-1], z[i-1]
+        # Get the current [i] and previous [i-1] coordinates to calculate angle
+        # between the 2 vectors = turning angle
+        c_1 = x[i], y[i], z[i]
+        c_0 = x[i-1], y[i-1], z[i-1]
 
-        # Calculate the angle between this vector and previous vector
-        turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+        # Calculate the turning angle between this vector and previous vector
+        turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
         # Push to store all values associated with a coordinate
         push!(all_x, x[i])
@@ -147,10 +138,10 @@ println("mock data S_av: ", S_av)
 # Create vectors to store deltas for summary stats and mean values used to gen ss
 delta_SI = Float64[]
 delta_S = Float64[]
-means = Float64[]
+ks = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:90000
+for i in 1:50000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -159,9 +150,10 @@ for i in 1:90000
     SI_prime_av = Float64[]
     S_prime_av = Float64[]
 
-    # Sample step length mean from uniform dist between 0 & 1 save value to means
-    m = rand()
-    push!(means, m)
+    # Sample k from uniform dist between 0 & 20? save value to means
+    # Check how to use Truncated uniform distribution
+    k_prime = rand(Uniform(0,10))
+    push!(ks, k_prime)
 
     random_walks = 10
     walks = zeros(random_walks)
@@ -184,24 +176,19 @@ for i in 1:90000
         time = Float64[]
         turn_angles = Float64[]
 
-        # Bounds for distributions
-        lower_t = 0
-        upper_t = pi
-        lower_p = 0
-        upper_p = 2*pi
-
         # Create starting position of the RW at the origin
         x[1] = 0.0;
         y[1] = 0.0;
         z[1] = 0.0;
 
-        # Sample first random point in 3D
-        r = rand(TruncatedNormal(m, 0.1, 0, 1)) # Adam uses log normal?
+        # Sample a random point that will be the source with r = pi
+        r = pi
         theta = acos(1-2*rand()) # theta between 0:pi radians
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-        # FOR THE PERSISTENCE: variance
-        sigma = 0.1 # Can control the tightness/spread of the distribution by altering
+        source = (r, theta, phi)
+        btheta = source[2]
+        bphi = source[3]
 
         # Perform a RW of nsteps
         for i = 2:length(x)
@@ -211,24 +198,17 @@ for i in 1:90000
             # Update the time
             t = t+t_next_jump
 
-            # Create variables for updating the distributions
-            mu_t = theta
-            mu_p = phi
+            # Creating a random point in 3D
+            # k = concentration, the higher k, the more biased the random walk
+            # k = 1
+            # Here we want to try and infer the mean step length
+            r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
+            theta = rand(VonMises(btheta, k_prime),1)      # theta between 0:pi radians
+            theta = theta[1]
+            phi = rand(VonMises(bphi, k_prime),1)          # phi between 0:2*pi radians
+            phi = phi[1]
 
-            # Create the distributions for theta and phi to sample next theta and phi
-            # Should these be halved?
-            # This should be sampled from wrapped normal distribution?
-            dist_theta = TruncatedNormal(theta, sigma, lower_t, upper_t)
-            dist_phi = TruncatedNormal(phi, sigma, lower_p, upper_p)
-
-            # Randomly sample from the distributions to get updated theta and phi to
-            # create next point in 3D space
-            theta = rand(dist_theta)
-            phi = rand(dist_phi)
-            # Here we insert the randomly sampled mean between 0 and 1
-            r = rand(TruncatedNormal(m, 0.1, 0, 1))
-
-            # Map spherical point in 3D to the Cartesian Plane
+            # Mapping spherical coordinates onto the cartesian plane
             dx = r*sin(theta)*cos(phi);
             dy = r*sin(theta)*sin(phi);
             dz = r*cos(theta);
@@ -238,12 +218,13 @@ for i in 1:90000
             y[i] = y[i-1] + dy
             z[i] = z[i-1] + dz
 
-            # Get the coordinate and previous coordinate
-            c_0 = x[i], y[i], z[i]
-            c_1 = x[i-1], y[i-1], z[i-1]
+            # Get the current [i] and previous [i-1] coordinates to calculate angle
+            # between the 2 vectors = turning angle
+            c_1 = x[i], y[i], z[i]
+            c_0 = x[i-1], y[i-1], z[i-1]
 
-            # Calculate the angle between this vector and previous vector
-            turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
+            # Calculate the turning angle between this vector and previous vector
+            turn_angle = acos(vecdot(c_0,c_1)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
             # Push to store all values associated with a coordinate
             push!(all_x, x[i])
@@ -309,69 +290,63 @@ println("e_S_1: ", e_S_1)
 e_S_01 = percentile(delta_S, 0.1)
 println("e_S_01: ", e_S_01)
 
-
 # CALCULATING THE ACCEPTED M' VALUES FOR PLOTTING
-accepted_m = Float64[]
+accepted_k = Float64[]
 
-zipped_SI = zip(delta_SI, means)
-zipped_S = zip(delta_S, means)
+zipped_SI = zip(delta_SI, ks)
+zipped_S = zip(delta_S, ks)
 
 # PLOTTING THE POSTERIOR DISTRIBUTION OF THE MEAN STEP LENGTH
 # Plot the posterior distribution of the mean step length using S and SI each
 # time using 1 and 0.1 percnetiles
 
 # 1. SI_1
-# for i in zipped_SI
-#     if i[1] <= e_SI_1
-#         push!(accepted_m, i[2])
-#     end
-# end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=100)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 1p")
+for i in zipped_SI
+    if i[1] <= e_SI_1
+        push!(accepted_k, i[2])
+    end
+end
+x = accepted_k
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="K", color="orange")
+ax[:set_xlim]([0,10])
+ax[:set_title]("K Posterior Distribution: BRW: SI_1")
 
 # 2. SI_0.1
 # for i in zipped_SI
 #     if i[1] <= e_SI_01
-#         push!(accepted_m, i[2])
+#         push!(accepted_k, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 0.1p")
-
-# 3. S_1
-for i in zipped_S
-    if i[1] <= e_S_1
-        push!(accepted_m, i[2])
-    end
-end
-x = accepted_m
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length", color="salmon")
-ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1")
-
-# plot1 = PyPlot.plt[:hist](x; bins=200, alpha=0.4)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: S: e = 1p")
-
-# 4. S_0.1
+# x = accepted_k
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="K", color="orange")
+# ax[:set_xlim]([0,10])
+# ax[:set_title]("K Posterior Distribution: BRW: SI_01")
+#
+# # 3. S_1
+# for i in zipped_S
+#     if i[1] <= e_S_1
+#         push!(accepted_k, i[2])
+#     end
+# end
+# x = accepted_k
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="K", color="orange")
+# ax[:set_xlim]([0,10])
+# ax[:set_title]("K Distribution: BRW: S_1")
+#
+# # 4. S_0.1
 # for i in zipped_S
 #     if i[1] <= e_S_01
-#         push!(accepted_m, i[2])
+#         push!(accepted_k, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: S: e = 0.1p")
+# x = accepted_k
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="K", color="orange")
+# ax[:set_xlim]([0,10])
+# ax[:set_title]("K Posterior Distribution: BRW: SI_01")
 
-println("size m': ", size(means))
-println("size accepted_m: ", size(accepted_m))
+println("size ks': ", size(ks))
+println("size accepted_k: ", size(accepted_k))

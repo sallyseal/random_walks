@@ -1,7 +1,10 @@
 # This script does the same as script rw_simulations.jl
-# Here we attempt to infer mean step length
-# We can also attempt to infer how persistent a random walk is - i.e. we can
-# attempt to infer the variance of the theta and phi distributions, respectively
+# Here we attempt to infer the variance of the theta and phi distributions
+# It's an attempt to infer how persistent the random walkl is
+# Sample variance from a uniform distribution between 0 and 1.5?
+# Ask Michael about range of variance?
+# All other parameters such as step length etc. stay constant
+# Step length constant at 0.5 mean with variance = 0.1
 
 using Distributions;
 using PyPlot;
@@ -46,16 +49,14 @@ for i = 1:length(walks)
     y[1] = 0.0;
     z[1] = 0.0;
 
-    # PARAMETER TO INFER: msl
-    msl = 0.7
-
     # Sample first random point in 3D
-    r = rand(TruncatedNormal(msl, 0.1, 0, 1)) # Adam uses log normal?
+    r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
     theta = acos(1-2*rand()) # theta between 0:pi radians
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
-    # FOR THE PERSISTENCE: variance
-    sigma = 0.1 # Can control the tightness/spread of the distribution by altering
+    # This is what we want to try to INFER
+    # FOR THE PERSISTENCE: variance of theta and phi distributions
+    sigma = 1.5 # Can control the tightness/spread of the distribution by altering
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -80,7 +81,7 @@ for i = 1:length(walks)
         theta = rand(dist_theta)
         phi = rand(dist_phi)
         # Here you can change the mean step length we are trying to infer
-        r = rand(TruncatedNormal(msl, 0.1, 0, 1))
+        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
 
         # Map spherical point in 3D to the Cartesian Plane
         dx = r*sin(theta)*cos(phi);
@@ -147,10 +148,10 @@ println("mock data S_av: ", S_av)
 # Create vectors to store deltas for summary stats and mean values used to gen ss
 delta_SI = Float64[]
 delta_S = Float64[]
-means = Float64[]
+variance = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:90000
+for i in 1:50000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -159,9 +160,10 @@ for i in 1:90000
     SI_prime_av = Float64[]
     S_prime_av = Float64[]
 
-    # Sample step length mean from uniform dist between 0 & 1 save value to means
-    m = rand()
-    push!(means, m)
+    # Sample variance mean from uniform dist between 0 & 1.5 save value to variance
+    # Check with Michael on the variance range???
+    v = rand(Uniform(0,2))
+    push!(variance, v)
 
     random_walks = 10
     walks = zeros(random_walks)
@@ -183,6 +185,8 @@ for i in 1:90000
         all_r = Float64[]
         time = Float64[]
         turn_angles = Float64[]
+        all_theta = Float64[]
+        all_phi = Float64[]
 
         # Bounds for distributions
         lower_t = 0
@@ -196,12 +200,12 @@ for i in 1:90000
         z[1] = 0.0;
 
         # Sample first random point in 3D
-        r = rand(TruncatedNormal(m, 0.1, 0, 1)) # Adam uses log normal?
+        r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
         theta = acos(1-2*rand()) # theta between 0:pi radians
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
         # FOR THE PERSISTENCE: variance
-        sigma = 0.1 # Can control the tightness/spread of the distribution by altering
+        sigma = v # Can control the tightness/spread of the distribution by altering
 
         # Perform a RW of nsteps
         for i = 2:length(x)
@@ -225,8 +229,7 @@ for i in 1:90000
             # create next point in 3D space
             theta = rand(dist_theta)
             phi = rand(dist_phi)
-            # Here we insert the randomly sampled mean between 0 and 1
-            r = rand(TruncatedNormal(m, 0.1, 0, 1))
+            r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
 
             # Map spherical point in 3D to the Cartesian Plane
             dx = r*sin(theta)*cos(phi);
@@ -252,6 +255,8 @@ for i in 1:90000
             push!(all_r, r)
             push!(time, t)
             push!(turn_angles, turn_angle)
+            push!(all_theta, theta)
+            push!(all_phi, phi)
         end
 
         # Calculate simulated summary statistics
@@ -310,68 +315,63 @@ e_S_01 = percentile(delta_S, 0.1)
 println("e_S_01: ", e_S_01)
 
 
-# CALCULATING THE ACCEPTED M' VALUES FOR PLOTTING
-accepted_m = Float64[]
+# CALCULATING THE ACCEPTED V' VALUES FOR PLOTTING
+accepted_v = Float64[]
 
-zipped_SI = zip(delta_SI, means)
-zipped_S = zip(delta_S, means)
+zipped_SI = zip(delta_SI, variance)
+zipped_S = zip(delta_S, variance)
 
-# PLOTTING THE POSTERIOR DISTRIBUTION OF THE MEAN STEP LENGTH
-# Plot the posterior distribution of the mean step length using S and SI each
+# PLOTTING THE POSTERIOR DISTRIBUTION OF THE VARIANCE
+# Plot the posterior distribution of the variance using S and SI each
 # time using 1 and 0.1 percnetiles
 
 # 1. SI_1
 # for i in zipped_SI
 #     if i[1] <= e_SI_1
-#         push!(accepted_m, i[2])
+#         push!(accepted_v, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=100)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 1p")
+# x = accepted_v
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
 
 # 2. SI_0.1
 # for i in zipped_SI
 #     if i[1] <= e_SI_01
-#         push!(accepted_m, i[2])
+#         push!(accepted_v, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 0.1p")
-
-# 3. S_1
+# x = accepted_v
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
+#
+# # 3. S_1
 for i in zipped_S
     if i[1] <= e_S_1
-        push!(accepted_m, i[2])
+        push!(accepted_v, i[2])
     end
 end
-x = accepted_m
+x = accepted_v
 fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length", color="salmon")
-ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1")
-
-# plot1 = PyPlot.plt[:hist](x; bins=200, alpha=0.4)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: S: e = 1p")
-
-# 4. S_0.1
+sns.distplot(x, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
+#
+# # 4. S_0.1
 # for i in zipped_S
 #     if i[1] <= e_S_01
-#         push!(accepted_m, i[2])
+#         push!(accepted_v, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: S: e = 0.1p")
+# x = accepted_v
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
 
-println("size m': ", size(means))
-println("size accepted_m: ", size(accepted_m))
+println("size v': ", size(variance))
+println("size accepted_v: ", size(accepted_v))

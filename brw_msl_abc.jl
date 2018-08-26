@@ -262,8 +262,8 @@ for i in 1:30000
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
-    difference_si = (SI_av - SI_prime_av)^2
-    difference_s = (S_av - S_prime_av)^2
+    difference_si = sqrt((SI_av - SI_prime_av)^2)
+    difference_s = sqrt((S_av - S_prime_av)^2)
     # println("difference_si: ", difference_si)
     # println("difference_s: ", difference_s)
 

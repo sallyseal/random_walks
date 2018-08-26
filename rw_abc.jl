@@ -51,7 +51,7 @@ for i = 1:length(walks)
         t = t+t_next_jump
 
         # Creating a random point in 3D
-        r = rand(TruncatedNormal(0.2, 0.1, 0, 1))
+        r = rand(TruncatedNormal(0.2, 0.01, 0, 1))
         theta = acos(1-2*rand())                # theta between 0:pi radians
         phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
@@ -124,7 +124,7 @@ delta_S = Float64[]
 means = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:50000
+for i in 1:10000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -172,7 +172,7 @@ for i in 1:50000
             t = t+t_next_jump
 
             # Creating a random point in 3D
-            r = rand(TruncatedNormal(m, 0.1, 0, 1))
+            r = rand(TruncatedNormal(m, 0.01, 0, 1))
             theta = acos(1-2*rand())                # theta between 0:pi radians
             phi = 2*pi*rand()                       # phi between 0:2*pi radians
 
@@ -237,8 +237,8 @@ for i in 1:50000
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
-    difference_si = (SI_av - SI_prime_av)^2
-    difference_s = (S_av - S_prime_av)^2
+    difference_si = sqrt((SI_av - SI_prime_av)^2)
+    difference_s = sqrt((S_av - S_prime_av)^2)
     # println("difference_si: ", difference_si)
     # println("difference_s: ", difference_s)
 
@@ -263,7 +263,10 @@ println("e_S_01: ", e_S_01)
 
 
 # CALCULATING THE ACCEPTED M' VALUES FOR PLOTTING
-accepted_m = Float64[]
+accepted_m_si_1 = Float64[]
+accepted_m_si_01 = Float64[]
+accepted_m_s_1 = Float64[]
+accepted_m_s_01 = Float64[]
 
 zipped_SI = zip(delta_SI, means)
 zipped_S = zip(delta_S, means)
@@ -275,50 +278,60 @@ zipped_S = zip(delta_S, means)
 # 1. SI_1
 for i in zipped_SI
     if i[1] <= e_SI_1
-        push!(accepted_m, i[2])
+        push!(accepted_m_si_1, i[2])
     end
 end
-x = accepted_m
+x = accepted_m_si_1
 fig,ax = PyPlot.subplots()
 sns.distplot(x, axlabel="Mean Step Length", color="salmon")
 ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: SI_01")
+ax[:set_title]("Mean Step Length Posterior Distribution: SI_1")
 
+println("size m': ", size(means))
+println("accepted_m_si_1: ", size(accepted_m_si_1))
+# ------------------------------------------------------------------------------
 # 2. SI_0.1
 # for i in zipped_SI
 #     if i[1] <= e_SI_01
-#         push!(accepted_m, i[2])
+#         push!(accepted_m_si_01, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: SI: e = 0.1p")
-
+# x = accepted_m_si_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: SI_01")
+#
+# println("size m': ", size(means))
+# println("accepted_m_si_01: ", size(accepted_m_si_01))
+# ------------------------------------------------------------------------------
 # 3. S_1
 # for i in zipped_S
 #     if i[1] <= e_S_1
-#         push!(accepted_m, i[2])
+#         push!(accepted_m_s_1, i[2])
 #     end
 # end
-# x = accepted_m
+# x = accepted_m_s_1
 # fig,ax = PyPlot.subplots()
 # sns.distplot(x, axlabel="Mean Step Length", color="salmon")
 # ax[:set_xlim]([0,1])
 # ax[:set_title]("Mean Step Length Posterior Distribution: S_1")
-
+#
+# println("size m': ", size(means))
+# println("accepted_m_s_1: ", size(accepted_m_s_1))
+# ------------------------------------------------------------------------------
 # 4. S_0.1
 # for i in zipped_S
 #     if i[1] <= e_S_01
-#         push!(accepted_m, i[2])
+#         push!(accepted_m_s_01, i[2])
 #     end
 # end
-# x = accepted_m
-# plot1 = PyPlot.plt[:hist](x; bins=50, alpha=0.5)
-# PyPlot.xlabel("Mean Step Length")
-# PyPlot.ylabel("Density")
-# PyPlot.title("Mean Step Length Posterior Distribution: S: e = 0.1p")
-
-println("size m': ", size(means))
-println("size accepted_m: ", size(accepted_m))
+# x = accepted_m_s_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: S_01")
+#
+# println("size m': ", size(means))
+# println("accepted_m_s_01: ", size(accepted_m_s_01))
+# ------------------------------------------------------------------------------

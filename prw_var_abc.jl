@@ -17,6 +17,9 @@ using PyCall, PyPlot; @pyimport seaborn as sns
 SI_av = Float64[]
 S_av = Float64[]
 
+# MSL is kept constant as we are trying to infer variance only
+msl = 0.2
+
 random_walks = 10
 walks = zeros(random_walks)
 for i = 1:length(walks)
@@ -50,13 +53,13 @@ for i = 1:length(walks)
     z[1] = 0.0;
 
     # Sample first random point in 3D
-    r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
+    r = rand(TruncatedNormal(msl, 0.1, 0, 1)) # Adam uses log normal?
     theta = acos(1-2*rand()) # theta between 0:pi radians
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
     # This is what we want to try to INFER
     # FOR THE PERSISTENCE: variance of theta and phi distributions
-    sigma = 1.5 # Can control the tightness/spread of the distribution by altering
+    sigma = 0.1 # Can control the tightness/spread of the distribution by altering
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -81,7 +84,7 @@ for i = 1:length(walks)
         theta = rand(dist_theta)
         phi = rand(dist_phi)
         # Here you can change the mean step length we are trying to infer
-        r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
+        r = rand(TruncatedNormal(msl, 0.1, 0, 1))
 
         # Map spherical point in 3D to the Cartesian Plane
         dx = r*sin(theta)*cos(phi);
@@ -160,8 +163,7 @@ for i in 1:50000
     SI_prime_av = Float64[]
     S_prime_av = Float64[]
 
-    # Sample variance mean from uniform dist between 0 & 1.5 save value to variance
-    # Check with Michael on the variance range???
+    # Sample variance mean from uniform dist between 0 & 2 save value to variance
     v = rand(Uniform(0,2))
     push!(variance, v)
 
@@ -200,7 +202,7 @@ for i in 1:50000
         z[1] = 0.0;
 
         # Sample first random point in 3D
-        r = rand(TruncatedNormal(0.5, 0.1, 0, 1)) # Adam uses log normal?
+        r = rand(TruncatedNormal(msl, 0.1, 0, 1)) # Adam uses log normal?
         theta = acos(1-2*rand()) # theta between 0:pi radians
         phi = 2*pi*rand()        # phi between 0:2*pi radians
 
@@ -229,7 +231,7 @@ for i in 1:50000
             # create next point in 3D space
             theta = rand(dist_theta)
             phi = rand(dist_phi)
-            r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
+            r = rand(TruncatedNormal(msl, 0.1, 0, 1))
 
             # Map spherical point in 3D to the Cartesian Plane
             dx = r*sin(theta)*cos(phi);
@@ -291,8 +293,8 @@ for i in 1:50000
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
-    difference_si = (SI_av - SI_prime_av)^2
-    difference_s = (S_av - S_prime_av)^2
+    difference_si = sqrt((SI_av - SI_prime_av)^2)
+    difference_s = sqrt((S_av - S_prime_av)^2)
     # println("difference_si: ", difference_si)
     # println("difference_s: ", difference_s)
 
@@ -316,7 +318,10 @@ println("e_S_01: ", e_S_01)
 
 
 # CALCULATING THE ACCEPTED V' VALUES FOR PLOTTING
-accepted_v = Float64[]
+accepted_v_si_1 = Float64[]
+accepted_v_si_01 = Float64[]
+accepted_v_s_1 = Float64[]
+accepted_v_s_01 = Float64[]
 
 zipped_SI = zip(delta_SI, variance)
 zipped_S = zip(delta_S, variance)
@@ -326,52 +331,62 @@ zipped_S = zip(delta_S, variance)
 # time using 1 and 0.1 percnetiles
 
 # 1. SI_1
-# for i in zipped_SI
-#     if i[1] <= e_SI_1
-#         push!(accepted_v, i[2])
-#     end
-# end
-# x = accepted_v
-# fig,ax = PyPlot.subplots()
-# sns.distplot(x, axlabel="Variance")
-# ax[:set_xlim]([0,2])
-# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
-
-# 2. SI_0.1
-# for i in zipped_SI
-#     if i[1] <= e_SI_01
-#         push!(accepted_v, i[2])
-#     end
-# end
-# x = accepted_v
-# fig,ax = PyPlot.subplots()
-# sns.distplot(x, axlabel="Variance")
-# ax[:set_xlim]([0,2])
-# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
-#
-# # 3. S_1
-for i in zipped_S
-    if i[1] <= e_S_1
-        push!(accepted_v, i[2])
+for i in zipped_SI
+    if i[1] <= e_SI_1
+        push!(accepted_v_si_1, i[2])
     end
 end
-x = accepted_v
+x = accepted_v_si_1
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: SI_1")
+
+println("size v': ", size(variance))
+println("accepted_v_si_1: ", size(accepted_v_si_1))
+# ------------------------------------------------------------------------------
+# 2. SI_0.1
+for i in zipped_SI
+    if i[1] <= e_SI_01
+        push!(accepted_v_si_01, i[2])
+    end
+end
+x = accepted_v_si_01
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: SI_01")
+
+println("size v': ", size(variance))
+println("accepted_v_si_01: ", size(accepted_v_si_01))
+# ------------------------------------------------------------------------------
+# 3. S_1
+for i in zipped_S
+    if i[1] <= e_S_1
+        push!(accepted_v_s_1, i[2])
+    end
+end
+x = accepted_v_s_1
 fig,ax = PyPlot.subplots()
 sns.distplot(x, axlabel="Variance")
 ax[:set_xlim]([0,2])
 ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
-#
-# # 4. S_0.1
-# for i in zipped_S
-#     if i[1] <= e_S_01
-#         push!(accepted_v, i[2])
-#     end
-# end
-# x = accepted_v
-# fig,ax = PyPlot.subplots()
-# sns.distplot(x, axlabel="Variance")
-# ax[:set_xlim]([0,2])
-# ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
 
 println("size v': ", size(variance))
-println("size accepted_v: ", size(accepted_v))
+println("accepted_v_s_1: ", size(accepted_v_s_1))
+# ------------------------------------------------------------------------------
+# 4. S_0.1
+for i in zipped_S
+    if i[1] <= e_S_01
+        push!(accepted_v_s_01, i[2])
+    end
+end
+x = accepted_v_s_01
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: S_01")
+
+println("size v': ", size(variance))
+println("accepted_v_s_01: ", size(accepted_v_s_01))
+# ------------------------------------------------------------------------------

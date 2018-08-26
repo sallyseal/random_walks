@@ -267,8 +267,8 @@ for i in 1:50000
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
-    difference_si = (SI_av - SI_prime_av)^2
-    difference_s = (S_av - S_prime_av)^2
+    difference_si = sqrt((SI_av - SI_prime_av)^2)
+    difference_s = sqrt((S_av - S_prime_av)^2)
     # println("difference_si: ", difference_si)
     # println("difference_s: ", difference_s)
 
@@ -301,16 +301,16 @@ zipped_S = zip(delta_S, ks)
 # time using 1 and 0.1 percnetiles
 
 # 1. SI_1
-for i in zipped_SI
-    if i[1] <= e_SI_1
-        push!(accepted_k, i[2])
-    end
-end
-x = accepted_k
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="K", color="orange")
-ax[:set_xlim]([0,10])
-ax[:set_title]("K Posterior Distribution: BRW: SI_1")
+# for i in zipped_SI
+#     if i[1] <= e_SI_1
+#         push!(accepted_k, i[2])
+#     end
+# end
+# x = accepted_k
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="K", color="orange")
+# ax[:set_xlim]([0,10])
+# ax[:set_title]("K Posterior Distribution: BRW: SI_1")
 
 # 2. SI_0.1
 # for i in zipped_SI
@@ -325,16 +325,16 @@ ax[:set_title]("K Posterior Distribution: BRW: SI_1")
 # ax[:set_title]("K Posterior Distribution: BRW: SI_01")
 #
 # # 3. S_1
-# for i in zipped_S
-#     if i[1] <= e_S_1
-#         push!(accepted_k, i[2])
-#     end
-# end
-# x = accepted_k
-# fig,ax = PyPlot.subplots()
-# sns.distplot(x, axlabel="K", color="orange")
-# ax[:set_xlim]([0,10])
-# ax[:set_title]("K Distribution: BRW: S_1")
+for i in zipped_S
+    if i[1] <= e_S_1
+        push!(accepted_k, i[2])
+    end
+end
+x = accepted_k
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="K", color="orange")
+ax[:set_xlim]([0,10])
+ax[:set_title]("K Distribution: BRW: S_1")
 #
 # # 4. S_0.1
 # for i in zipped_S

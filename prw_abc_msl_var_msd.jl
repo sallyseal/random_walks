@@ -2,6 +2,7 @@
 # Here we attempt to infer mean step length
 # We can also attempt to infer how persistent a random walk is - i.e. we can
 # attempt to infer the variance of the theta and phi distributions, respectively
+# combined = SI + MSD
 
 using Distributions;
 using PyPlot;
@@ -15,6 +16,7 @@ using PyCall, PyPlot; @pyimport pandas as pd
 # Create vectors to store the average SI and S for 10x RWs
 SI_av = Float64[]
 S_av = Float64[]
+msd_av = Float64[]
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -101,6 +103,10 @@ for i = 1:length(walks)
         # Calculate the angle between this vector and previous vector
         turn_angle = acos(vecdot(c_1,c_0)/sqrt(sum(c_1.*c_1)*sum(c_0.*c_0)))
 
+        # Calculate msd
+        msd = (c_0[1] - c_1[1])^2 + (c_0[2] - c_1[2])^2 + (c_0[3] - c_1[3])^2
+        # msd = sqrt(msd)
+
         # Push to store all values associated with a coordinate
         push!(all_x, x[i])
         push!(all_y, y[i])
@@ -108,6 +114,7 @@ for i = 1:length(walks)
         push!(all_r, r)
         push!(time, t)
         push!(turn_angles, turn_angle)
+        push!(msd_av, msd)
     end
 
     # Calculate mock summary statistics
@@ -137,31 +144,28 @@ for i = 1:length(walks)
     push!(SI_av, si)
     push!(S_av, s)
 end
-a = mean(SI_av)
-b = std(SI_av)
-SI_av = (SI_av - a) / b
-SI_mean = mean(SI_av)
-
-c = mean(S_av)
-d = std(S_av)
-S_av = (S_av - c) / d
-S_mean = mean(S_av)
-
-SS = (SI_mean + S_mean)
-
+SI_av = mean(SI_av)
+S_av = mean(S_av)
+msd_av = mean(msd_av)
+combined_av = (SI_av + msd_av)
 println("mock data SI_av: ", SI_av)
 println("mock data S_av: ", S_av)
-println("mock data SS: ", SS)
-break
+println("mock data msd_av: ", msd_av)
+println("mock data combined: ", combined_av)
+
+
 ######### SIMULATION 10 000 x ##########
 
 # Create vectors to store deltas for summary stats and mean values used to gen ss
-delta_SS = Float64[]
+delta_SI = Float64[]
+delta_S = Float64[]
+delta_msd = Float64[]
+delta_combined = Float64[]
 means = Float64[]
 variance = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:10000
+for i in 1:1000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -169,6 +173,7 @@ for i in 1:10000
     # Create vectors to store the average SI and S for 10x RWs
     SI_prime_av = Float64[]
     S_prime_av = Float64[]
+    msd_prime_av = Float64[]
 
     # Sample step length mean from uniform dist between 0 & 1 save value to means
     # Sample variance mean from uniform dist between 0 & 2 save value to variance
@@ -264,6 +269,10 @@ for i in 1:10000
                 turn_angle = NaN
             end
 
+            # Calculate msd
+            msd = (c_0[1] - c_1[1])^2 + (c_0[2] - c_1[2])^2 + (c_0[3] - c_1[3])^2
+            # msd = sqrt(msd)
+
             # Push to store all values associated with a coordinate
             push!(all_x, x[i])
             push!(all_y, y[i])
@@ -271,6 +280,7 @@ for i in 1:10000
             push!(all_r, r)
             push!(time, t)
             push!(turn_angles, turn_angle)
+            push!(msd_prime_av, msd)
         end
 
         # Calculate simulated summary statistics
@@ -300,67 +310,95 @@ for i in 1:10000
         push!(SI_prime_av, si)
         push!(S_prime_av, s)
     end
-    SI_prime_av = (SI_prime_av - (mean(SI_prime_av))) / std(SI_prime_av)
     SI_prime_av = mean(SI_prime_av)
-    S_prime_av = (S_prime_av - (mean(S_prime_av))) / std(S_prime_av)
     S_prime_av = mean(S_prime_av)
-    SS_prime = (SI_prime_av + S_prime_av)
+    msd_prime_av = mean(msd_prime_av)
+    combined_prime_av = mean(SI_prime_av + msd_prime_av)
 
     # Calculate delta and push to delta vector for plotting
     # delta vector will be 10 000 long
-    difference_ss = sqrt((SS - SS_prime)^2)
-
+    difference_si = sqrt((SI_av - SI_prime_av)^2)
+    difference_s = sqrt((S_av - S_prime_av)^2)
+    difference_msd = sqrt((msd_av - msd_prime_av)^2)
+    difference_combined = sqrt((combined_av - combined_prime_av)^2)
     # println("difference_si: ", difference_si)
     # println("difference_s: ", difference_s)
-    push!(delta_SS, difference_ss)
+
+    push!(delta_SI, difference_si)
+    push!(delta_S, difference_s)
+    push!(delta_msd, difference_msd)
+    push!(delta_combined, difference_combined)
 end
-
-
-x = delta_SS
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Delta Combined Summary Statistic")
-ax[:set_xlim]
-ax[:set_title]("Distribution of Delta Combined Summary Statistic: PRW: SS_1")
-
+println("delta_SI: ", delta_SI)
+println("delta_combined: ", delta_combined)
 # EPSILON CALCULATIONS
-# Calculate the 1 and 0.1 percentile of SS to generate the epsilon values
-e_SS_1 = percentile(delta_SS, 1)
-println("e_SS_1: ", e_SS_1)
+# Calculate the 1 and 0.1 percentile of SI and S to generate the epsilon values
+e_SI_1 = percentile(delta_SI, 1)
+println("e_SI_1: ", e_SI_1)
+e_SI_01 = percentile(delta_SI, 0.1)
+println("e_SI_01: ", e_SI_01)
 
-e_SS_01 = percentile(delta_SS, 0.1)
-println("e_SS_01: ", e_SS_01)
+e_S_1 = percentile(delta_S, 1)
+println("e_S_1: ", e_S_1)
+e_S_01 = percentile(delta_S, 0.1)
+println("e_S_01: ", e_S_01)
+
+e_msd_1 = percentile(delta_msd, 1)
+println("e_msd_1: ", e_msd_1)
+e_msd_01 = percentile(delta_msd, 0.1)
+println("e_msd_01: ", e_msd_01)
+
+e_combined_1 = percentile(delta_combined, 1)
+println("e_combined_1: ", e_combined_1)
+e_combined_01 = percentile(delta_combined, 0.1)
+println("e_combined_01: ", e_combined_01)
 
 # CALCULATING THE ACCEPTED M' & V' VALUES FOR PLOTTING
-accepted_m_1 = Float64[]
-accepted_m_01 = Float64[]
+accepted_m_si_1 = Float64[]
+accepted_m_si_01 = Float64[]
+accepted_m_s_1 = Float64[]
+accepted_m_s_01 = Float64[]
+accepted_m_msd_1 = Float64[]
+accepted_m_msd_01 = Float64[]
+accepted_m_combined_1 = Float64[]
+accepted_m_combined_01 = Float64[]
 
-accepted_v_1 = Float64[]
-accepted_v_01 = Float64[]
+accepted_v_si_1 = Float64[]
+accepted_v_si_01 = Float64[]
+accepted_v_s_1 = Float64[]
+accepted_v_s_01 = Float64[]
+accepted_v_msd_1 = Float64[]
+accepted_v_msd_01 = Float64[]
+accepted_v_combined_1 = Float64[]
+accepted_v_combined_01 = Float64[]
 
-zipped_SS = zip(delta_SS, means, variance)
+zipped_SI = zip(delta_SI, means, variance)
+zipped_S = zip(delta_S, means, variance)
+zipped_msd = zip(delta_msd, means, variance)
+zipped_combined = zip(delta_combined, means, variance)
 
 # PLOTTING THE POSTERIOR DISTRIBUTION OF THE MEAN STEP LENGTH
 # Plot the posterior distribution of the mean step length using S and SI each
 # time using 1 and 0.1 percnetiles
 # -----------------------------------------------------------------------------
-# 1. SS_1
-for i in zipped_SS
-    if i[1] <= e_SS_1
-        push!(accepted_m_1, i[2])
-        push!(accepted_v_1, i[3])
+# 1. SI_1
+for i in zipped_SI
+    if i[1] <= e_SI_1
+        push!(accepted_m_si_1, i[2])
+        push!(accepted_v_si_1, i[3])
     end
 end
-x = accepted_m_1
+x = accepted_m_si_1
 fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length")
+sns.distplot(x, axlabel="Mean Step Length", color="salmon")
 ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution Combined: PRW: SS_1")
+ax[:set_title]("Mean Step Length Posterior Distribution: PRW: SI_1")
 
-y = accepted_v_1
+y = accepted_v_si_1
 fig,ax = PyPlot.subplots()
 sns.distplot(y, axlabel="Variance")
 ax[:set_xlim]([0,2])
-ax[:set_title]("Variance Posterior Distribution Combined: PRW: SS_1")
+ax[:set_title]("Variance Posterior Distribution: PRW: SI_1")
 
 fig,ax = PyPlot.subplots()
 df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
@@ -368,28 +406,27 @@ sns.jointplot(x="msl", y="variance", data=df, kind="kde")
 
 println("size m': ", size(means))
 println("size v': ", size(variance))
-println("size accepted_m_1: ", size(accepted_m_1))
-println("size accepted_v_1: ", size(accepted_v_1))
+println("size accepted_m_si_1: ", size(accepted_m_si_1))
+println("size accepted_v_si_1: ", size(accepted_v_si_1))
 #------------------------------------------------------------------------------
-#
-# # 2. SS_01
-# for i in zipped_SS
-#     if i[1] <= e_SS_01
-#         push!(accepted_m_01, i[2])
-#         push!(accepted_v_01, i[3])
+# # 2. SI_01
+# for i in zipped_SI
+#     if i[1] <= e_SI_01
+#         push!(accepted_m_si_01, i[2])
+#         push!(accepted_v_si_01, i[3])
 #     end
 # end
-# x = accepted_m_01
+# x = accepted_m_si_01
 # fig,ax = PyPlot.subplots()
 # sns.distplot(x, axlabel="Mean Step Length")
 # ax[:set_xlim]([0,1])
-# ax[:set_title]("Mean Step Length Posterior Distribution Combined: PRW: SS_0.1")
+# ax[:set_title]("Mean Step Length Posterior Distribution: PRW: SI_0.1")
 #
-# y = accepted_v_01
+# y = accepted_v_si_01
 # fig,ax = PyPlot.subplots()
 # sns.distplot(y, axlabel="Variance")
 # ax[:set_xlim]([0,2])
-# ax[:set_title]("Variance Posterior Distribution Combined: PRW: SS_01")
+# ax[:set_title]("Variance Posterior Distribution: PRW: SI_01")
 #
 # fig,ax = PyPlot.subplots()
 # df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
@@ -397,23 +434,190 @@ println("size accepted_v_1: ", size(accepted_v_1))
 #
 # println("size m': ", size(means))
 # println("size v': ", size(variance))
-# println("size accepted_m_01: ", size(accepted_m_01))
-# println("size accepted_v_01: ", size(accepted_v_01))
+# println("size accepted_m_si_01: ", size(accepted_m_si_01))
+# println("size accepted_v_si_01: ", size(accepted_v_si_01))
 # ------------------------------------------------------------------------------
+# 3. S_1
+for i in zipped_S
+    if i[1] <= e_S_1
+        push!(accepted_m_s_1, i[2])
+        push!(accepted_v_s_1, i[3])
+    end
+end
+x = accepted_m_s_1
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+ax[:set_xlim]([0,1])
+ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1")
 
-# a = sort(accepted_m_01)
+y = accepted_v_s_1
+fig,ax = PyPlot.subplots()
+sns.distplot(y, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: S_1")
+
+fig,ax = PyPlot.subplots()
+df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
+sns.jointplot(x="msl", y="variance", data=df, kind="kde")
+
+println("size m': ", size(means))
+println("size v': ", size(variance))
+println("size accepted_m_s_1: ", size(accepted_m_s_1))
+println("size accepted_v_s_1: ", size(accepted_v_s_1))
+# ------------------------------------------------------------------------------
+# 4. S_01
+# for i in zipped_S
+#     if i[1] <= e_S_01
+#         push!(accepted_m_s_01, i[2])
+#         push!(accepted_v_s_01, i[3])
+#     end
+# end
+# x = accepted_m_s_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_01")
+#
+# y = accepted_v_s_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(y, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: S_01")
+#
+# fig,ax = PyPlot.subplots()
+# df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
+# sns.jointplot(x="msl", y="variance", data=df, kind="kde")
+#
+# println("size m': ", size(means))
+# println("size v': ", size(variance))
+# println("size accepted_m_s_01: ", size(accepted_m_s_01))
+# println("size accepted_v_s_01: ", size(accepted_v_s_01))
+# -----------------------------------------------------------------------------
+# 5. MSD_1
+for i in zipped_msd
+    if i[1] <= e_msd_1
+        push!(accepted_m_msd_1, i[2])
+        push!(accepted_v_msd_1, i[3])
+    end
+end
+x = accepted_m_msd_1
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+ax[:set_xlim]([0,1])
+ax[:set_title]("Mean Step Length Posterior Distribution: PRW: MSD_1")
+
+y = accepted_v_msd_1
+fig,ax = PyPlot.subplots()
+sns.distplot(y, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: MSD_1")
+
+fig,ax = PyPlot.subplots()
+df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
+sns.jointplot(x="msl", y="variance", data=df, kind="kde")
+
+println("size m': ", size(means))
+println("size v': ", size(variance))
+println("size accepted_m_msd_1: ", size(accepted_m_msd_1))
+println("size accepted_v_msd_1: ", size(accepted_v_msd_1))
+#------------------------------------------------------------------------------
+# 6. MSD_01
+# for i in zipped_msd
+#     if i[1] <= e_msd_01
+#         push!(accepted_m_msd_01, i[2])
+#         push!(accepted_v_msd_01, i[3])
+#     end
+# end
+# x = accepted_m_msd_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: PRW: MSD_0.1_percentile")
+#
+# y = accepted_v_msd_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(y, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: MSD_0.1_percentile")
+#
+# fig,ax = PyPlot.subplots()
+# df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
+# sns.jointplot(x="msl", y="variance", data=df, kind="kde")
+#
+# println("size m': ", size(means))
+# println("size v': ", size(variance))
+# println("size accepted_m_msd_01: ", size(accepted_m_msd_01))
+# println("size accepted_v_msd_01: ", size(accepted_v_msd_01))
+# ------------------------------------------------------------------------------
+# 5. COMBINED_1
+for i in zipped_combined
+    if i[1] <= e_combined_1
+        push!(accepted_m_combined_1, i[2])
+        push!(accepted_v_combined_1, i[3])
+    end
+end
+x = accepted_m_combined_1
+fig,ax = PyPlot.subplots()
+sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+ax[:set_xlim]([0,1])
+ax[:set_title]("Mean Step Length Posterior Distribution: PRW: COMBINED_1")
+
+y = accepted_v_combined_1
+fig,ax = PyPlot.subplots()
+sns.distplot(y, axlabel="Variance")
+ax[:set_xlim]([0,2])
+ax[:set_title]("Variance Posterior Distribution: PRW: COMBINED_1")
+
+fig,ax = PyPlot.subplots()
+df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
+sns.jointplot(x="msl", y="variance", data=df, kind="kde")
+
+println("size m': ", size(means))
+println("size v': ", size(variance))
+println("size accepted_m_combined_1: ", size(accepted_m_combined_1))
+println("size accepted_v_combined_1: ", size(accepted_v_combined_1))
+# ------------------------------------------------------------------------------
+# 6. COMBINED_01
+# for i in zipped_combined
+#     if i[1] <= e_combined_01
+#         push!(accepted_m_combined_01, i[2])
+#         push!(accepted_v_combined_01, i[3])
+#     end
+# end
+# x = accepted_m_combined_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(x, axlabel="Mean Step Length", color="salmon")
+# ax[:set_xlim]([0,1])
+# ax[:set_title]("Mean Step Length Posterior Distribution: PRW: COMBINED_0.1")
+#
+# y = accepted_v_combined_01
+# fig,ax = PyPlot.subplots()
+# sns.distplot(y, axlabel="Variance")
+# ax[:set_xlim]([0,2])
+# ax[:set_title]("Variance Posterior Distribution: PRW: COMBINED_0.1")
+#
+# fig,ax = PyPlot.subplots()
+# df = pd.DataFrame(data=Dict(:msl=>x, :variance=>y))
+# sns.jointplot(x="msl", y="variance", data=df, kind="kde")
+#
+# println("size m': ", size(means))
+# println("size v': ", size(variance))
+# println("size accepted_m_combined_01: ", size(accepted_m_combined_01))
+# println("size accepted_v_combined_01: ", size(accepted_v_combined_01))
+# ------------------------------------------------------------------------------
+# a = sort(accepted_m_si_01)
 # fig,ax = PyPlot.subplots()
 # accepted_m_100 = a[1:101]
 # sns.distplot(a, axlabel="Mean Step Length")
 # ax[:set_xlim]([0,1])
-# ax[:set_title]("Mean Step Length Posterior Distribution Combined: PRW: SS_1: Best 100")
+# ax[:set_title]("Mean Step Length Posterior Distribution: PRW: S_1: Best 100")
 #
-# b = sort(accepted_v_01)
+# b = sort(accepted_v_si_01)
 # fig,ax = PyPlot.subplots()
 # accepted_v_100 = b[1:101]
 # sns.distplot(b, axlabel="Variance")
 # ax[:set_xlim]([0,2])
-# ax[:set_title]("Variance Posterior Distribution Combined: PRW: SS_1: Best 100")
+# ax[:set_title]("Variance Posterior Distribution: PRW: S_1: Best 100")
 #
 # a = x
 # b = y
@@ -424,10 +628,14 @@ println("size accepted_v_1: ", size(accepted_v_1))
 
 
 
-
-
-# SI_prime_av = (SI_prime_av - (mean(SI_prime_av))) / std(SI_prime_av)
-# SI_prime_av = log(mean(SI_prime_av) + 1)
-# S_prime_av = (S_prime_av - (mean(S_prime_av))) / std(S_prime_av)
-# S_prime_av = log(mean(S_prime_av) + 1)
-# SS_prime = (SI_prime_av + S_prime_av)
+# println("size m': ", size(means))
+# println("size accepted_m_si_1: ", size(accepted_m_si_1))
+# println("size accepted_m_si_01: ", size(accepted_m_si_01))
+# println("size accepted_m_s_1: ", size(accepted_m_s_1))
+# println("size accepted_m_s_01: ", size(accepted_m_s_01))
+#
+# println("size v': ", size(variance))
+# println("size accepted_v_si_1: ", size(accepted_v_si_1))
+# println("size accepted_v_si_01: ", size(accepted_v_si_01))
+# println("size accepted_v_s_1: ", size(accepted_v_s_1))
+# println("size accepted_v_s_01: ", size(accepted_v_s_01))

@@ -21,7 +21,7 @@ S_av = Float64[]
 
 # Set the level or bias higher by increasing k
 k = 10
-msl = 0.5
+msl = 0.2
 
 random_walks = 10
 walks = zeros(random_walks)
@@ -145,7 +145,7 @@ means = Float64[]
 ks = Float64[]
 
 # Repeat simulation 10 000x
-for i in 1:100000
+for i in 1:10000
 
     # Generate the simulated data (10x RWs of 100 steps each) and get summary stats
     ########## SIMULATED DATA ##########
@@ -158,7 +158,7 @@ for i in 1:100000
     # Check how to use Truncated uniform distribution
     m = rand()
     push!(means, m)
-    k_prime = rand(Uniform(0,10))
+    k_prime = rand(Uniform(0,100))
     push!(ks, k_prime)
 
     random_walks = 10
@@ -320,6 +320,9 @@ zipped_S = zip(delta_S, means, ks)
 # Plot the posterior distribution of the mean step length using S and SI each
 # time using 1 and 0.1 percnetiles
 # -----------------------------------------------------------------------------
+# Enter true parameters here
+truth = [msl, k, 0.0001]
+# -----------------------------------------------------------------------------
 # 1. SI_1
 for i in zipped_SI
     if i[1] <= e_SI_1
@@ -328,28 +331,53 @@ for i in zipped_SI
     end
 end
 x = accepted_m_si_1
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length")
-ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: BRW: SI_1")
+fig,(ax1,ax2,ax3) = PyPlot.subplots(1, 3, figsize=(15, 4))
+sns.distplot(x, ax=ax1, rug=true)
+ax1[:set_xlabel]("MSL")
+ax1[:set_ylabel]("Density")
+ax1[:set_xlim]([0,1])
+ax1[:scatter]([truth[1]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
 y = accepted_k_si_1
-fig,ax = PyPlot.subplots()
-sns.distplot(y, axlabel="K")
-ax[:set_xlim]([0,10])
-ax[:set_title]("K Posterior Distribution: BRW: SI_1")
+sns.distplot(y, ax=ax2, rug=true)
+ax2[:set_xlabel]("κ")
+ax2[:set_ylabel]("Density")
+ax2[:set_xlim]([0,100])
+ax2[:scatter]([truth[2]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
-fig,ax = PyPlot.subplots()
-df = pd.DataFrame(data=Dict(:msl=>x, :k=>y))
-sns.jointplot(x="msl", y="k", data=df, kind="kde")
+sns.kdeplot(x,y,shade=true, cmap="Blues", ax=ax3)
+sns.despine()
+ax3[:set_xlabel]("MSL")
+ax3[:set_ylabel]("κ")
+# ax3[:set_xlim]([0,1.3])
+ax3[:scatter]([truth[1]], [truth[2]], color ="gold", marker = "x", linewidth=2, s =200, zorder =120)
+
+PyPlot.savefig("/home/megan/project_3/brw_plots/brw_k$(k)_msl$(msl)_si_1.pdf")
 
 println("size m': ", size(means))
 println("size k': ", size(ks))
 println("size accepted_m_si_1: ", size(accepted_m_si_1))
 println("size accepted_k_si_1: ", size(accepted_k_si_1))
+
+accepted_k_si_1_norm = Float64[]
+for i in accepted_k_si_1
+    norm_k = i/k
+    push!(accepted_k_si_1_norm, norm_k)
+end
+println("accepted_k_si_1", accepted_k_si_1)
+println("accepted_k_si_1_norm", accepted_k_si_1_norm)
+x = accepted_k_si_1_norm
+fig,ax = PyPlot.subplots()
+sns.distplot(x, rug=true)
+sns.despine()
+ax[:set_xlabel]("Normalised κ")
+ax[:set_ylabel]("Density")
+ax[:set_xlim]([0,2])
+ax[:scatter]([truth[2]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
+
+PyPlot.savefig("/home/megan/project_3/brw_plots/brw_k$(k)_msl$(msl)_normalised_si_1.pdf")
 #------------------------------------------------------------------------------
-#
-# # 2. SI_01
+# 2. SI_01
 for i in zipped_SI
     if i[1] <= e_SI_01
         push!(accepted_m_si_01, i[2])
@@ -357,27 +385,52 @@ for i in zipped_SI
     end
 end
 x = accepted_m_si_01
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length")
-ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: BRW: SI_0.1")
+fig,(ax1,ax2,ax3) = PyPlot.subplots(1, 3, figsize=(15, 4))
+sns.distplot(x, ax=ax1, rug=true)
+ax1[:set_xlabel]("MSL")
+ax1[:set_ylabel]("Density")
+ax1[:set_xlim]([0,1])
+ax1[:scatter]([truth[1]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
 y = accepted_k_si_01
-fig,ax = PyPlot.subplots()
-sns.distplot(y, axlabel="K")
-ax[:set_xlim]([0,10])
-ax[:set_title]("K Posterior Distribution: BRW: SI_01")
+sns.distplot(y, ax=ax2, rug=true)
+ax2[:set_xlabel]("κ")
+ax2[:set_ylabel]("Density")
+ax2[:set_xlim]([0,100])
+ax2[:scatter]([truth[2]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
-fig,ax = PyPlot.subplots()
-df = pd.DataFrame(data=Dict(:msl=>x, :k=>y))
-sns.jointplot(x="msl", y="k", data=df, kind="kde")
+sns.kdeplot(x,y,shade=true, cmap="Blues", ax=ax3)
+sns.despine()
+ax3[:set_xlabel]("MSL")
+ax3[:set_ylabel]("κ")
+# ax3[:set_xlim]([0,1.3])
+ax3[:scatter]([truth[1]], [truth[2]], color ="gold", marker = "x", linewidth=2, s =200, zorder =120)
+
+PyPlot.savefig("/home/megan/project_3/brw_plots/brw_k$(k)_msl$(msl)_si_01.pdf")
 
 println("size m': ", size(means))
 println("size k': ", size(ks))
 println("size accepted_m_si_01: ", size(accepted_m_si_01))
 println("size accepted_k_si_01: ", size(accepted_k_si_01))
-# ------------------------------------------------------------------------------
-#
+
+accepted_k_si_01_norm = Float64[]
+for i in accepted_k_si_01
+    norm_k = i/k
+    push!(accepted_k_si_01_norm, norm_k)
+end
+println("accepted_k_si_1", accepted_k_si_01)
+println("accepted_k_si_1_norm", accepted_k_si_01_norm)
+x = accepted_k_si_1_norm
+fig,ax = PyPlot.subplots()
+sns.distplot(x, rug=true)
+sns.despine()
+ax[:set_xlabel]("Normalised κ")
+ax[:set_ylabel]("Density")
+ax[:set_xlim]([0,2])
+ax[:scatter]([truth[2]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
+
+PyPlot.savefig("/home/megan/project_3/brw_plots/brw_k$(k)_msl$(msl)_normalised_si_01.pdf")
+# # ------------------------------------------------------------------------------
 # 3. S_1
 for i in zipped_S
     if i[1] <= e_S_1
@@ -386,54 +439,69 @@ for i in zipped_S
     end
 end
 x = accepted_m_s_1
-fig,ax = PyPlot.subplots()
-sns.distplot(x, axlabel="Mean Step Length")
-ax[:set_xlim]([0,1])
-ax[:set_title]("Mean Step Length Posterior Distribution: BRW: S_1")
+fig,(ax1,ax2,ax3) = PyPlot.subplots(1, 3, figsize=(15, 4))
+sns.distplot(x, ax=ax1, rug=true, color="skyblue")
+ax1[:set_xlabel]("MSL")
+ax1[:set_ylabel]("Density")
+ax1[:set_xlim]([0,1])
+ax1[:scatter]([truth[1]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
 y = accepted_k_s_1
-fig,ax = PyPlot.subplots()
-sns.distplot(y, axlabel="K")
-ax[:set_xlim]([0,10])
-ax[:set_title]("K Posterior Distribution: BRW: S_1")
+sns.distplot(y, ax=ax2, rug=true, color="skyblue")
+ax2[:set_xlabel]("κ")
+ax2[:set_ylabel]("Density")
+ax2[:set_xlim]([0,100])
+ax2[:scatter]([truth[2]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
-fig,ax = PyPlot.subplots()
-df = pd.DataFrame(data=Dict(:msl=>x, :k=>y))
-sns.jointplot(x="msl", y="k", data=df, kind="kde")
+sns.kdeplot(x,y,shade=true, cmap="Blues", ax=ax3)
+sns.despine()
+ax3[:set_xlabel]("MSL")
+ax3[:set_ylabel]("κ")
+# ax3[:set_xlim]([0,1.3])
+ax3[:scatter]([truth[1]], [truth[2]], color ="gold", marker = "x", linewidth=2, s =200, zorder =120)
+
+PyPlot.savefig("/home/megan/project_3/brw_plots/brw_k$(k)_msl$(msl)_s_1.pdf")
 
 println("size m': ", size(means))
 println("size k': ", size(ks))
 println("size accepted_m_s_1: ", size(accepted_m_s_1))
 println("size accepted_k_s_1: ", size(accepted_k_s_1))
-# ------------------------------------------------------------------------------
+# # ------------------------------------------------------------------------------
+# # 4. S_01
+for i in zipped_S
+    if i[1] <= e_S_01
+        push!(accepted_m_s_01, i[2])
+        push!(accepted_k_s_01, i[3])
+    end
+end
+x = accepted_m_s_01
+fig,(ax1,ax2,ax3) = PyPlot.subplots(1, 3, figsize=(15, 4))
+sns.distplot(x, ax=ax1, rug=true, color="skyblue")
+ax1[:set_xlabel]("MSL")
+ax1[:set_ylabel]("Density")
+ax1[:set_xlim]([0,1])
+ax1[:scatter]([truth[1]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
 
-# 4. S_01
-# for i in zipped_S
-#     if i[1] <= e_S_01
-#         push!(accepted_m_s_01, i[2])
-#         push!(accepted_k_s_01, i[3])
-#     end
-# end
-# x = accepted_m_s_01
-# fig,ax = PyPlot.subplots()
-# sns.distplot(x, axlabel="Mean Step Length")
-# ax[:set_xlim]([0,1])
-# ax[:set_title]("Mean Step Length Posterior Distribution: BRW: S_01")
-#
-# y = accepted_k_s_01
-# fig,ax = PyPlot.subplots()
-# sns.distplot(y, axlabel="K")
-# ax[:set_xlim]([0,10])
-# ax[:set_title]("K Posterior Distribution: BRW: S_01")
-#
-# fig,ax = PyPlot.subplots()
-# df = pd.DataFrame(data=Dict(:msl=>x, :k=>y))
-# sns.jointplot(x="msl", y="k", data=df, kind="kde")
-#
-# println("size m': ", size(means))
-# println("size k': ", size(ks))
-# println("size accepted_m_s_01: ", size(accepted_m_s_01))
-# println("size accepted_k_s_01: ", size(accepted_k_s_01))
+y = accepted_k_s_01
+sns.distplot(y, ax=ax2, rug=true, color="skyblue")
+ax2[:set_xlabel]("κ")
+ax2[:set_ylabel]("Density")
+ax2[:set_xlim]([0,100])
+ax2[:scatter]([truth[2]], [truth[3]], color ="gold", marker = "x", linewidth=2, s =30, zorder =120)
+
+sns.kdeplot(x,y,shade=true, cmap="Blues", ax=ax3)
+sns.despine()
+ax3[:set_xlabel]("MSL")
+ax3[:set_ylabel]("κ")
+# ax3[:set_xlim]([0,1.3])
+ax3[:scatter]([truth[1]], [truth[2]], color ="gold", marker = "x", linewidth=2, s =200, zorder =120)
+
+PyPlot.savefig("/home/megan/project_3/brw_plots/brw_k$(k)_msl$(msl)_s_01.pdf")
+
+println("size m': ", size(means))
+println("size k': ", size(ks))
+println("size accepted_m_s_01: ", size(accepted_m_s_01))
+println("size accepted_k_s_01: ", size(accepted_k_s_01))
 # -----------------------------------------------------------------------------
 
 # Plot for plotting the top 100 or top 1000 particles in a particular run
@@ -457,15 +525,3 @@ println("size accepted_k_s_1: ", size(accepted_k_s_1))
 # df = pd.DataFrame(data=Dict(:msl=>x, :k=>y))
 # sns.jointplot(x="msl", y="k", data=df, kind="kde")
 # ------------------------------------------------------------------------------
-
-# println("size m': ", size(means))
-# println("size accepted_m_si_1: ", size(accepted_m_si_1))
-# println("size accepted_m_si_01: ", size(accepted_m_si_01))
-# println("size accepted_m_s_1: ", size(accepted_m_s_1))
-# println("size accepted_m_s_01: ", size(accepted_m_s_01))
-#
-# println("size k': ", size(ks))
-# println("size accepted_k_si_1: ", size(accepted_k_si_1))
-# println("size accepted_k_si_01: ", size(accepted_k_si_01))
-# println("size accepted_k_s_1: ", size(accepted_k_s_1))
-# println("size accepted_k_s_01: ", size(accepted_k_s_01))

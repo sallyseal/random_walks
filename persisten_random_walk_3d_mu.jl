@@ -16,7 +16,7 @@ prw_si = Float64[]
 prw_si_cart = Float64[]
 prw_sinuosity = Float64[]
 
-iterations = 1000
+iterations = 1
 walkers = zeros(iterations)
 for i = 1:length(walkers)
 
@@ -61,8 +61,7 @@ for i = 1:length(walkers)
     phi = 2*pi*rand()        # phi between 0:2*pi radians
 
     # FOR THE PERSISTENCE: variance
-    sigma_t = 0.1 # Can control the tightness/spread of the distribution by altering
-    sigma_p = 0.1 # Can control the tightness/spread of the distribution by altering
+    sigma = 0.1 # Can control the tightness/spread of the distribution by altering
 
     # Perform a RW of nsteps
     for i = 2:length(x)
@@ -79,19 +78,14 @@ for i = 1:length(walkers)
         # Create the distributions for theta and phi to sample next theta and phi
         # Should these be halved?
         # This should be sampled from wrapped normal distribution?
-        dist_theta = TruncatedNormal(theta, sigma_t, lower_t, upper_t)
-        dist_phi = TruncatedNormal(phi, sigma_p, lower_p, upper_p)
+        dist_theta = TruncatedNormal(theta, sigma, lower_t, upper_t)
+        dist_phi = TruncatedNormal(phi, sigma, lower_p, upper_p)
 
         # Randomly sample from the distributions to get updated theta and phi to
         # create next point in 3D space
         theta = rand(dist_theta)
         phi = rand(dist_phi)
         r = rand(TruncatedNormal(0.5, 0.1, 0, 1))
-
-        # Calculate dtheta and dphi: angle between new and old theta and phi
-        # Or should this rahter be dot product
-        dtheta = mu_t - theta
-        dphi = mu_p - phi
 
         # Map spherical point in 3D to the Cartesian Plane
         dx = r*sin(theta)*cos(phi);
@@ -115,9 +109,6 @@ for i = 1:length(walkers)
         push!(all_theta, theta)
         push!(all_phi, phi)
         push!(time, t)
-        push!(holding_time, t_next_jump)
-        push!(all_dtheta, dtheta)
-        push!(all_dphi, dphi)
         push!(all_x, x[i])
         push!(all_y, y[i])
         push!(all_z, z[i])
@@ -167,28 +158,28 @@ for i = 1:length(walkers)
 
     # Plotting each RW - uncomment if want to see this
     # using PyPlot; const plt = PyPlot
-    # PyPlot.PyObject(PyPlot.axes3D)
-    #
-    # x = x
-    # y = y
-    # z = z
-    #
-    # fig = plt.figure()
-    # ax = fig[:add_subplot](111, projection="3d")
-    # ax[:plot](x, y, z)
-    # # PyPlot.title("Shape of Persistent Random Walk")
-    # PyPlot.xlabel("x")
-    # PyPlot.ylabel("y")
-    # PyPlot.zlabel("z")
+    PyPlot.PyObject(PyPlot.axes3D)
+
+    x = x
+    y = y
+    z = z
+
+    fig = plt.figure()
+    ax = fig[:add_subplot](111, projection="3d")
+    ax[:plot](x, y, z)
+    # PyPlot.title("Shape of Persistent Random Walk")
+    PyPlot.xlabel("x")
+    PyPlot.ylabel("y")
+    PyPlot.zlabel("z")
 end
 
 # Calculate the mean of summary statistics
-prw_si_mu = mean(prw_si)
-prw_si_cart_mu = mean(prw_si_cart)
-prw_sinuosity_mu = mean(prw_sinuosity)
-println("prw straightness index average: ", prw_si_mu)
-println("prw_cartesian straightness index average: ", prw_si_cart_mu)
-println("prw sinuosity average: ", prw_sinuosity_mu)
+# prw_si_mu = mean(prw_si)
+# prw_si_cart_mu = mean(prw_si_cart)
+# prw_sinuosity_mu = mean(prw_sinuosity)
+# println("prw straightness index average: ", prw_si_mu)
+# println("prw_cartesian straightness index average: ", prw_si_cart_mu)
+# println("prw sinuosity average: ", prw_sinuosity_mu)
 
 # Plotting distributions of straightness index
 # a = prw_si
@@ -202,7 +193,7 @@ println("prw sinuosity average: ", prw_sinuosity_mu)
 # PyPlot.title("Randon Walk Straightness Index Cartesian")
 
 # Plotting distributions of the sinuosity
-b = prw_sinuosity
-plot2 = PyPlot.plt[:hist](b, alpha=0.4)
-PyPlot.xlabel("Sinuosity")
-PyPlot.title("Persistent Randon Walk Sinuosity Histogram")
+# b = prw_sinuosity
+# plot2 = PyPlot.plt[:hist](b, alpha=0.4)
+# PyPlot.xlabel("Sinuosity")
+# PyPlot.title("Persistent Randon Walk Sinuosity Histogram")
